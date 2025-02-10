@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en" data-bs-theme="dark">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ReaSpeechLite</title>
+    <link href="/css/bootstrap.min.css" rel="stylesheet">
+  </head>
+
+  <body style="overflow-y: scroll">
+    <script src="/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/main.js"></script>
+
+    <nav class="navbar navbar-expand-md navbar-dark fixed-top bg-body-tertiary">
+      <div class="container-fluid">
+        <span class="navbar-brand">ReaSpeechLite</span>
+        <div class="d-flex align-items-center gap-3">
+          <select id="language-select" class="form-select w-auto" aria-label="Language">
+            <option value="">Detect Language</option>
+            <option value="en">English</option>
+          </select>
+          <div class="form-check form-switch" title="Translate to English">
+            <input class="form-check-input" type="checkbox" id="translate-checkbox">
+            <label class="form-check-label" for="translate-checkbox">Translate</label>
+          </div>
+        </div>
+        <button id="process-button" class="btn btn-primary" type="button" style="min-width: 170px">
+          <span id="spinner" class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="display: none"></span>
+          <span id="process-text">Process</span>
+        </button>
+      </div>
+    </nav>
+
+    <main class="container-fluid" style="margin-top: 65px;">
+      <div id="transcript" class="bg-body-tertiary p-2 rounded" style="display: none">
+        <h4 class="float-start">Transcript</h4>
+        <div class="float-end">
+          <button id="create-markers-button" class="btn btn-secondary btn-sm mb-2" type="button" style="display: none">Create Markers</button>
+        </div>
+
+        <table class="table table-sm table-striped">
+          <thead>
+            <tr>
+              <th>Start</th>
+              <th>End</th>
+              <th>Text</th>
+              <th>Score</th>
+              <th>Source</th>
+            </tr>
+          </thead>
+
+          <tbody>
+          </tbody>
+        </table>
+      </div>
+    </main>
+
+    <script>
+      const app = new App();
+      app.init();
+    </script>
+  </body>
+</html>
