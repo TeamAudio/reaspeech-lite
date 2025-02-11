@@ -11,7 +11,7 @@ struct ResamplingExporter
      * specified destination sample rate, and stores the resampled audio data
      * in the provided buffer.
      *
-     * @param audioSourcePersistentID The persistent ID of the audio source to read from.
+     * @param audioSource The audio source to read audio data from.
      * @param destSampleRate The sample rate to which the audio data should be resampled.
      * @param channel The channel index to read from the audio source.
      * @param buffer A vector to store the resampled audio data.

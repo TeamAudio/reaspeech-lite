@@ -246,7 +246,7 @@ class App {
   formatTimestamp(segmentTime, className) {
     if (className === 'segment-start') {
       const linkClasses = 'link-offset-2 link-underline link-underline-opacity-0 link-underline-opacity-50-hover';
-      return `<a href="javascript:" onclick="app.playSegment(this)" class="${className} ${linkClasses}" data-segment-time="${segmentTime}">${this.timestampToString(segmentTime)}</a>`;      return `<a href="javascript:" onclick="app.playSegment(this)" class="${className}" data-segment-time="${segmentTime}">${this.timestampToString(segmentTime)}</a>`;
+      return `<a href="javascript:" onclick="app.playSegment(this)" class="${className} ${linkClasses}" data-segment-time="${segmentTime}">${this.timestampToString(segmentTime)}</a>`;
     } else {
       return `<span class="${className}" data-segment-time="${segmentTime}">${this.timestampToString(segmentTime)}</span>`;
     }
