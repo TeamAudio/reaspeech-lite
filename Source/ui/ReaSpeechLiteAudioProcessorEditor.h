@@ -89,6 +89,14 @@ private:
             };
         }
 
+        if (urlToRetrieve == "img/tech-audio-logo.png")
+        {
+            return juce::WebBrowserComponent::Resource {
+                getBinaryData (BinaryData::techaudiologo_png, BinaryData::techaudiologo_pngSize),
+                "image/png"
+            };
+        }
+
         if (urlToRetrieve == "js/bootstrap.bundle.min.js")
         {
             return juce::WebBrowserComponent::Resource {
