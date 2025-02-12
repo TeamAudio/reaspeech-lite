@@ -37,8 +37,8 @@ target_compile_definitions(${PROJECT_NAME}
 juce_add_binary_data("${PROJECT_NAME}Data" SOURCES
     Source/binary/css/bootstrap.min.css
     Source/binary/css/bootstrap.min.css.map
-    Source/binary/html/index.html
     Source/binary/img/tech-audio-logo.png
+    Source/binary/index.html
     Source/binary/js/bootstrap.bundle.min.js
     Source/binary/js/bootstrap.bundle.min.js.map
     Source/binary/js/main.js

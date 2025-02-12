@@ -306,54 +306,62 @@ class App {
   }
 }
 
-// The following code is copied from modules/juce_gui_extra/native/javascript/index.js
-// This file is intended to be used with a JS build system, but since we do not
-// currently use one, this is the easiest way to get native functions to work.
+if (typeof window.__JUCE__ === "undefined") {
+  function getNativeFunction() {
+    return function() {
+      return new Promise((resolve, reject) => {});
+    };
+  }
+} else {
+  // The following code is copied from modules/juce_gui_extra/native/javascript/index.js
+  // That file is intended to be used with a JS build system, but since we do not
+  // currently use one, this is the easiest way to get native functions to work.
 
-class PromiseHandler {
-  constructor() {
-    this.lastPromiseId = 0;
-    this.promises = new Map();
+  class PromiseHandler {
+    constructor() {
+      this.lastPromiseId = 0;
+      this.promises = new Map();
 
-    window.__JUCE__.backend.addEventListener(
-      "__juce__complete",
-      ({ promiseId, result }) => {
-        if (this.promises.has(promiseId)) {
-          this.promises.get(promiseId).resolve(result);
-          this.promises.delete(promiseId);
+      window.__JUCE__.backend.addEventListener(
+        "__juce__complete",
+        ({ promiseId, result }) => {
+          if (this.promises.has(promiseId)) {
+            this.promises.get(promiseId).resolve(result);
+            this.promises.delete(promiseId);
+          }
         }
-      }
-    );
+      );
+    }
+
+    createPromise() {
+      const promiseId = this.lastPromiseId++;
+      const result = new Promise((resolve, reject) => {
+        this.promises.set(promiseId, { resolve: resolve, reject: reject });
+      });
+      return [promiseId, result];
+    }
   }
 
-  createPromise() {
-    const promiseId = this.lastPromiseId++;
-    const result = new Promise((resolve, reject) => {
-      this.promises.set(promiseId, { resolve: resolve, reject: reject });
-    });
-    return [promiseId, result];
+  const promiseHandler = new PromiseHandler();
+
+  function getNativeFunction(name) {
+    if (!window.__JUCE__.initialisationData.__juce__functions.includes(name))
+      console.warn(
+        `Creating native function binding for '${name}', which is unknown to the backend`
+      );
+
+    const f = function () {
+      const [promiseId, result] = promiseHandler.createPromise();
+
+      window.__JUCE__.backend.emitEvent("__juce__invoke", {
+        name: name,
+        params: Array.prototype.slice.call(arguments),
+        resultId: promiseId,
+      });
+
+      return result;
+    };
+
+    return f;
   }
-}
-
-const promiseHandler = new PromiseHandler();
-
-function getNativeFunction(name) {
-  if (!window.__JUCE__.initialisationData.__juce__functions.includes(name))
-    console.warn(
-      `Creating native function binding for '${name}', which is unknown to the backend`
-    );
-
-  const f = function () {
-    const [promiseId, result] = promiseHandler.createPromise();
-
-    window.__JUCE__.backend.emitEvent("__juce__invoke", {
-      name: name,
-      params: Array.prototype.slice.call(arguments),
-      resultId: promiseId,
-    });
-
-    return result;
-  };
-
-  return f;
 }
