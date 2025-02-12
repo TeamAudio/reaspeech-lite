@@ -49,8 +49,8 @@ public:
         {
             juce::File (modelsDir).createDirectory();
 
-            DBG ("Downloading model from huggingface");
-            juce::URL url ("https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-" + modelName + ".bin");
+            DBG ("Downloading model");
+            juce::URL url = Config::getModelURL (modelName);
             auto file = juce::File (modelPath);
             downloadTask = url.downloadToFile (file, juce::URL::DownloadTaskOptions());
 
@@ -61,6 +61,10 @@ public:
             {
                 DBG ("Failed to download model");
                 downloadTask.reset();
+
+                if (juce::File (modelPath).deleteFile())
+                    DBG ("Deleted model file");
+
                 return false;
             }
 
