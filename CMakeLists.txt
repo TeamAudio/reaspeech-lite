@@ -17,7 +17,7 @@ if(UNIX AND NOT APPLE)
     if(NOT WEBKIT_FOUND)
         pkg_check_modules(WEBKIT REQUIRED webkit2gtk-4.0)
     endif()
-    
+
     include_directories(
         ${GTK3_INCLUDE_DIRS}
         ${WEBKIT_INCLUDE_DIRS}
@@ -26,7 +26,7 @@ if(UNIX AND NOT APPLE)
         ${GTK3_LIBRARY_DIRS}
         ${WEBKIT_LIBRARY_DIRS}
     )
-    
+
     add_compile_definitions(
         JUCE_WEB_BROWSER=1
         JUCE_USE_WEBKIT=1
@@ -34,7 +34,7 @@ if(UNIX AND NOT APPLE)
 else()
     add_compile_definitions(
         JUCE_WEB_BROWSER=1
-        JUCE_USE_WIN_WEBVIEW2=1
+        JUCE_USE_WIN_WEBVIEW2_WITH_STATIC_LINKING=1
     )
 endif()
 
