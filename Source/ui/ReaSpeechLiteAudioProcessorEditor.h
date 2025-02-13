@@ -229,7 +229,7 @@ private:
                 audioSource->setProperty ("name", SafeUTF8::encode (as->getName()));
                 audioSource->setProperty ("persistentID", juce::String (as->getPersistentID()));
                 audioSource->setProperty ("sampleRate", as->getSampleRate());
-                audioSource->setProperty ("sampleCount", as->getSampleCount());
+                audioSource->setProperty ("sampleCount", (juce::int64) as->getSampleCount());
                 audioSource->setProperty ("duration", as->getDuration());
                 audioSource->setProperty ("channelCount", as->getChannelCount());
                 audioSource->setProperty ("merits64BitSamples", as->merits64BitSamples());

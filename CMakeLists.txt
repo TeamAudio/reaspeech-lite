@@ -10,6 +10,18 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 add_subdirectory(whisper.cpp)
 
+juce_set_ara_sdk_path("${CMAKE_SOURCE_DIR}/ARA_SDK")
+
+juce_add_plugin(${PROJECT_NAME}
+    COMPANY_NAME TechAudio
+    COMPANY_WEBSITE https://techaud.io
+    PLUGIN_MANUFACTURER_CODE TATA
+    PLUGIN_CODE Trsl
+    FORMATS VST3
+    IS_ARA_EFFECT TRUE
+    NEEDS_WEBVIEW2 TRUE
+)
+
 if(UNIX AND NOT APPLE)
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(GTK3 REQUIRED gtk+-3.0)
@@ -31,24 +43,14 @@ if(UNIX AND NOT APPLE)
         JUCE_WEB_BROWSER=1
         JUCE_USE_WEBKIT=1
     )
+
+    juce_link_with_embedded_linux_subprocess(${PROJECT_NAME})
 else()
     add_compile_definitions(
         JUCE_WEB_BROWSER=1
         JUCE_USE_WIN_WEBVIEW2_WITH_STATIC_LINKING=1
     )
 endif()
-
-juce_set_ara_sdk_path("${CMAKE_SOURCE_DIR}/ARA_SDK")
-
-juce_add_plugin(${PROJECT_NAME}
-    COMPANY_NAME TechAudio
-    COMPANY_WEBSITE https://techaud.io
-    PLUGIN_MANUFACTURER_CODE TATA
-    PLUGIN_CODE Trsl
-    FORMATS VST3
-    IS_ARA_EFFECT TRUE
-    NEEDS_WEBVIEW2 TRUE
-)
 
 juce_generate_juce_header(${PROJECT_NAME})
 
