@@ -20,6 +20,7 @@ juce_add_plugin(${PROJECT_NAME}
     PLUGIN_CODE Trsl
     FORMATS VST3
     IS_ARA_EFFECT TRUE
+    NEEDS_CURL TRUE
     NEEDS_WEBVIEW2 TRUE
 )
 
@@ -64,7 +65,7 @@ target_sources(${PROJECT_NAME}
 target_compile_definitions(${PROJECT_NAME}
     PUBLIC
         DONT_SET_USING_JUCE_NAMESPACE=1
-        JUCE_USE_CURL=0
+        JUCE_USE_CURL=1
         JUCE_VST3_CAN_REPLACE_VST2=0
 )
 

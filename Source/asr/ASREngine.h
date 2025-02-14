@@ -54,10 +54,10 @@ public:
             auto file = juce::File (modelPath);
             downloadTask = url.downloadToFile (file, juce::URL::DownloadTaskOptions());
 
-            while (! downloadTask->isFinished())
+            while (downloadTask != nullptr && ! downloadTask->isFinished())
                 juce::Thread::sleep (100);
 
-            if (downloadTask->hadError())
+            if (downloadTask == nullptr || downloadTask->hadError())
             {
                 DBG ("Failed to download model");
                 downloadTask.reset();
