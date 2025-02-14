@@ -9,11 +9,11 @@ Speech-to-text transcription VST3/ARA plugin
 ## CMake initialization
 
     mkdir build
-    cmake -B build -DCMAKE_BUILD_TYPE=Debug -DBUILD_SHARED_LIBS=0
+    cmake -B build -DCMAKE_BUILD_TYPE=Debug
 
 For Windows/CUDA, use:
 
-    cmake -B build -DCMAKE_BUILD_TYPE=Debug -DBUILD_SHARED_LIBS=0 -DGGML_CUDA=1
+    cmake -B build -DCMAKE_BUILD_TYPE=Debug -DGGML_CUDA=1
 
 ## Building
 

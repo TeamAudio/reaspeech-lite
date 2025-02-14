@@ -6,6 +6,7 @@ add_subdirectory(JUCE)
 
 # Enable position independent code for whisper.cpp
 set(BUILD_SHARED_LIBS OFF)
+set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 add_subdirectory(whisper.cpp)
