@@ -51,6 +51,8 @@ public:
             processBlockBypassed (buffer, midiMessages);
     }
 
+    using AudioProcessor::processBlock;
+
     const juce::String getName() const override { return JucePlugin_Name; }
 
     bool acceptsMidi() const override { return false; }

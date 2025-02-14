@@ -70,6 +70,8 @@ public:
         return render (buffer, blockRange);
     }
 
+    using ARAPlaybackRenderer::processBlock;
+
 private:
     void buildReader (juce::ARAPlaybackRegion* playbackRegion)
     {
