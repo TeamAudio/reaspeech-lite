@@ -34,11 +34,18 @@
       </div>
     </nav>
 
-    <main class="container-fluid" style="margin-top: 65px;">
+    <main class="container-fluid" style="margin-top: 65px">
+      <div id="alerts"></div>
+
       <div id="transcript" class="bg-body-tertiary p-2 rounded" style="display: none">
-        <h4 class="float-start">Transcript</h4>
-        <div class="float-end">
-          <button id="create-markers-button" class="btn btn-secondary btn-sm mb-2" type="button" style="display: none">Create Markers</button>
+        <h4 class="float-start" >Transcript</h4>
+        <div id="create-menu" class="float-end dropdown mb-2" style="display: none">
+          <button class="btn btn-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+            Create
+          </button>
+          <ul class="dropdown-menu">
+            <li><a id="create-markers" class="dropdown-item" href="javascript:">Markers</a></li>
+          </ul>
         </div>
 
         <table class="table table-sm table-striped">

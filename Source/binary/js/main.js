@@ -15,13 +15,8 @@ class App {
   init() {
     this.fillLanguageSelect();
 
-    document.getElementById('process-button').onclick = () => {
-      this.handleProcessClick();
-    };
-
-    document.getElementById('create-markers-button').onclick = () => {
-      this.handleCreateMarkersClick();
-    };
+    document.getElementById('process-button').onclick = () => { this.handleProcess(); };
+    document.getElementById('create-markers').onclick = () => { this.handleCreateMarkers(); };
 
     setInterval(() => {
       this.update();
@@ -41,7 +36,7 @@ class App {
     });
   }
 
-  handleProcessClick() {
+  handleProcess() {
     this.disableProcessButton();
     this.showSpinner();
     this.setProcessText('Processing...');
@@ -72,7 +67,8 @@ class App {
             this.showTranscript();
             this.addSegments(result.segments, audioSource);
           } else if (result.error) {
-            console.error(`Error: ${result.error}`);
+            this.showAlert('danger', '<b>Error:</b> ' + this.htmlEscape(result.error));
+            audioSources.length = 0;
           }
 
           processNextAudioSource();
@@ -83,7 +79,7 @@ class App {
     });
   }
 
-  handleCreateMarkersClick() {
+  handleCreateMarkers() {
     const segments = document.querySelectorAll('.segment');
     let markers = [];
     for (let i = 0; i < segments.length; i++) {
@@ -171,12 +167,28 @@ class App {
     document.getElementById('spinner').style.display = 'none';
   }
 
+  showAlert(type, message) {
+    const alerts = document.getElementById('alerts');
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = [
+      `<div class="alert alert-${type} alert-dismissible mb-2" role="alert">`,
+      `   <div>${message}</div>`,
+      '   <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>',
+      '</div>'
+    ].join('')
+    alerts.append(wrapper);
+  }
+
+  showCreateMenu() {
+    document.getElementById('create-menu').style.display = 'block';
+  }
+
   showTranscript() {
     document.getElementById('transcript').style.display = 'block';
 
     this.canCreateMarkers().then((canCreateMarkers) => {
       if (canCreateMarkers) {
-        document.getElementById('create-markers-button').style.display = 'inline-block';
+        this.showCreateMenu();
       }
     });
   }
