@@ -16,7 +16,8 @@ class App {
     this.fillLanguageSelect();
 
     document.getElementById('process-button').onclick = () => { this.handleProcess(); };
-    document.getElementById('create-markers').onclick = () => { this.handleCreateMarkers(); };
+    document.getElementById('create-markers').onclick = () => { this.handleCreateMarkers('markers'); };
+    document.getElementById('create-regions').onclick = () => { this.handleCreateMarkers('regions'); };
 
     setInterval(() => {
       this.update();
@@ -79,23 +80,34 @@ class App {
     });
   }
 
-  handleCreateMarkers() {
+  handleCreateMarkers(markerType) {
     const segments = document.querySelectorAll('.segment');
     let markers = [];
+
     for (let i = 0; i < segments.length; i++) {
       const segment = segments[i];
       const segmentStart = segment.querySelector('.segment-start');
-      if (segmentStart.dataset.playbackTime) {
-        const playbackTime = segmentStart.dataset.playbackTime;
+      const segmentEnd = segment.querySelector('.segment-end');
+
+      if (segmentStart.dataset.playbackStart) {
+        const playbackStart = segmentStart.dataset.playbackStart;
+        const playbackEnd = segmentEnd.dataset.playbackEnd;
         const text = segment.querySelector('.segment-text').innerText;
+
         markers.push({
-          position: playbackTime,
+          start: playbackStart,
+          end: playbackEnd,
           name: text
         });
       }
     }
+
     if (markers.length > 0) {
-      this.createMarkers(markers);
+      this.createMarkers(markers, markerType).then((result) => {
+        if (result && result.error) {
+          this.showAlert('danger', '<b>Error:</b> ' + this.htmlEscape(result.error));
+        }
+      });
     }
   }
 
@@ -132,11 +144,13 @@ class App {
               let end = playbackStart + segmentEnd - modificationStart;
 
               if (start < playbackStart || start > playbackEnd) {
-                startElement.dataset.playbackTime = '';
+                startElement.dataset.playbackStart = '';
+                startElement.dataset.playbackEnd = '';
                 startElement.innerText = '';
                 endElement.innerText = '';
               } else {
-                startElement.dataset.playbackTime = start;
+                startElement.dataset.playbackStart = start;
+                endElement.dataset.playbackEnd = end;
                 startElement.innerText = this.timestampToString(start);
                 endElement.innerText = this.timestampToString(end);
               }
@@ -265,8 +279,8 @@ class App {
   }
 
   playSegment(segment) {
-    const playbackTime = parseFloat(segment.dataset.playbackTime);
-    this.playAt(playbackTime);
+    const playbackStart = parseFloat(segment.dataset.playbackStart);
+    this.playAt(playbackStart);
   }
 
   playAt(seconds) {

@@ -10,6 +10,7 @@
 #include "../asr/WhisperLanguages.h"
 #include "../plugin/ReaSpeechLiteAudioProcessorImpl.h"
 #include "../reaper/ReaperProxy.h"
+#include "../types/MarkerType.h"
 #include "../utils/SafeUTF8.h"
 
 class NativeFunctions : public OptionsBuilder<juce::WebBrowserComponent::Options>
@@ -49,7 +50,7 @@ public:
 
     void createMarkers (const juce::var& args, std::function<void (const juce::var&)> complete)
     {
-        if (! args.isArray() || args.size() < 1)
+        if (! args.isArray() || args.size() < 2)
         {
             complete (makeError ("Invalid arguments"));
             return;
@@ -57,19 +58,29 @@ public:
 
         const auto markers = args[0].getArray();
 
+        const auto markerTypeOpt = MarkerType::fromString (args[1].toString().toStdString());
+        if (! markerTypeOpt)
+        {
+            complete (makeError ("Invalid marker type"));
+            return;
+        }
+        const auto markerType = *markerTypeOpt;
+
         if (! rpr.hasAddProjectMarker2)
         {
             complete (makeError ("Function not available"));
             return;
         }
 
-        withReaperUndo ("Create markers from transcript", [&] {
+        withReaperUndo ("Create " + MarkerType::toString (markerType) + " from transcript", [&] {
             for (auto i = 0; i < (*markers).size(); ++i)
             {
                 const auto marker = (*markers)[i].getDynamicObject();
-                const auto position = marker->getProperty ("position");
+                const auto regions = markerType == MarkerType::regions;
+                const auto start = marker->getProperty ("start");
+                const auto end = marker->getProperty ("end");
                 const auto name = marker->getProperty ("name");
-                rpr.AddProjectMarker2 (ReaperProxy::activeProject, false, position, position, name.toString().toRawUTF8(), i + 1, 0);
+                rpr.AddProjectMarker2 (ReaperProxy::activeProject, regions, start, end, name.toString().toRawUTF8(), i + 1, 0);
             }
         });
 
