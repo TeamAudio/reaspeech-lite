@@ -52,7 +52,7 @@ public:
         {
             g.setColour (juce::Colours::white);
             g.setFont (juce::FontOptions (15.0f));
-            g.drawFittedText ("ARA host isn't detected. This plugin only supports ARA mode",
+            g.drawFittedText ("ARA host isn't detected. This plugin only supports ARA mode.",
                               getLocalBounds(),
                               juce::Justification::centred,
                               1);
