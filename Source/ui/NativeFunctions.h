@@ -27,17 +27,25 @@ public:
 
     juce::WebBrowserComponent::Options buildOptions (const juce::WebBrowserComponent::Options& initialOptions)
     {
+        auto bindFn = [this] (auto memberFn)
+        {
+            return [this, memberFn] (const auto& args, const auto& complete)
+            {
+                (this->*memberFn) (args, complete);
+            };
+        };
+
         return initialOptions
-            .withNativeFunction ("canCreateMarkers", [this] (const auto& args, const auto& complete) { canCreateMarkers (args, complete); })
-            .withNativeFunction ("createMarkers", [this] (const auto& args, const auto& complete) { createMarkers (args, complete); })
-            .withNativeFunction ("getAudioSources", [this] (const auto& args, const auto& complete) { getAudioSources (args, complete); })
-            .withNativeFunction ("getRegionSequences", [this] (const auto& args, const auto& complete) { getRegionSequences (args, complete); })
-            .withNativeFunction ("getTranscriptionStatus", [this] (const auto& args, const auto& complete) { getTranscriptionStatus (args, complete); })
-            .withNativeFunction ("getWhisperLanguages", [this] (const auto& args, const auto& complete) { getWhisperLanguages (args, complete); })
-            .withNativeFunction ("play", [this] (const auto& args, const auto& complete) { play (args, complete); })
-            .withNativeFunction ("stop", [this] (const auto& args, const auto& complete) { stop (args, complete); })
-            .withNativeFunction ("setPlaybackPosition", [this] (const auto& args, const auto& complete) { setPlaybackPosition (args, complete); })
-            .withNativeFunction ("transcribeAudioSource", [this] (const auto& args, const auto& complete) { transcribeAudioSource (args, complete); });
+            .withNativeFunction ("canCreateMarkers", bindFn (&NativeFunctions::canCreateMarkers))
+            .withNativeFunction ("createMarkers", bindFn (&NativeFunctions::createMarkers))
+            .withNativeFunction ("getAudioSources", bindFn (&NativeFunctions::getAudioSources))
+            .withNativeFunction ("getRegionSequences", bindFn (&NativeFunctions::getRegionSequences))
+            .withNativeFunction ("getTranscriptionStatus", bindFn (&NativeFunctions::getTranscriptionStatus))
+            .withNativeFunction ("getWhisperLanguages", bindFn (&NativeFunctions::getWhisperLanguages))
+            .withNativeFunction ("play", bindFn (&NativeFunctions::play))
+            .withNativeFunction ("stop", bindFn (&NativeFunctions::stop))
+            .withNativeFunction ("setPlaybackPosition", bindFn (&NativeFunctions::setPlaybackPosition))
+            .withNativeFunction ("transcribeAudioSource", bindFn (&NativeFunctions::transcribeAudioSource));
     }
 
     void canCreateMarkers (const juce::var&, std::function<void (const juce::var&)> complete)
