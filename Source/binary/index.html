@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en" data-bs-theme="dark">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ReaSpeechLite</title>
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+  </head>
+
+  <body style="overflow-y: scroll">
+    <script src="js/bootstrap.bundle.min.js"></script>
+    <script src="js/main.js"></script>
+
+    <nav class="navbar navbar-expand-md navbar-dark fixed-top bg-body-tertiary">
+      <div class="container-fluid">
+        <span class="navbar-brand">
+          <img src="img/tech-audio-logo.png" alt="Logo" width="49" height="41" style="position: absolute; left: 8px; top: 10px">
+          <span style="margin-left: 52px">ReaSpeechLite</span>
+        </span>
+        <div class="d-flex align-items-center gap-3">
+          <select id="language-select" class="form-select w-auto" aria-label="Language">
+            <option value="">Detect Language</option>
+            <option value="en">English</option>
+          </select>
+          <div class="form-check form-switch" title="Translate to English">
+            <input class="form-check-input" type="checkbox" id="translate-checkbox">
+            <label class="form-check-label" for="translate-checkbox">Translate</label>
+          </div>
+        </div>
+        <button id="process-button" class="btn btn-primary" type="button" style="min-width: 170px">
+          <span id="spinner" class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="display: none"></span>
+          <span id="process-text">Process</span>
+        </button>
+      </div>
+    </nav>
+
+    <main class="container-fluid" style="margin-top: 65px">
+      <div id="alerts"></div>
+
+      <div id="transcript" class="bg-body-tertiary p-2 rounded" style="display: none">
+        <h4 class="float-start" >Transcript</h4>
+        <div id="create-menu" class="float-end dropdown mb-2" style="display: none">
+          <button class="btn btn-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+            Create
+          </button>
+          <ul class="dropdown-menu">
+            <li><a id="create-markers" class="dropdown-item" href="javascript:">Markers</a></li>
+            <li><a id="create-regions" class="dropdown-item" href="javascript:">Regions</a></li>
+          </ul>
+        </div>
+
+        <table class="table table-sm table-striped">
+          <thead>
+            <tr>
+              <th>Start</th>
+              <th>End</th>
+              <th>Text</th>
+              <th>Score</th>
+              <th>Source</th>
+            </tr>
+          </thead>
+
+          <tbody>
+          </tbody>
+        </table>
+      </div>
+    </main>
+
+    <script>
+      const app = new App();
+      app.init();
+    </script>
+  </body>
+</html>
