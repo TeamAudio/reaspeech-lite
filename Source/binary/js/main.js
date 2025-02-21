@@ -5,15 +5,24 @@ class App {
     this.getAudioSources = getNativeFunction("getAudioSources");
     this.getRegionSequences = getNativeFunction("getRegionSequences");
     this.getTranscriptionStatus = getNativeFunction("getTranscriptionStatus");
+    this.getWebState = getNativeFunction("getWebState");
     this.getWhisperLanguages = getNativeFunction("getWhisperLanguages");
     this.play = getNativeFunction("play");
     this.stop = getNativeFunction("stop");
     this.setPlaybackPosition = getNativeFunction("setPlaybackPosition");
+    this.setWebState = getNativeFunction("setWebState");
     this.transcribeAudioSource = getNativeFunction("transcribeAudioSource");
+
+    this.state = {
+      language: '',
+      translate: false
+    };
   }
 
   init() {
-    this.fillLanguageSelect();
+    this.loadState().then(() => {
+      this.initLanguages();
+    });
 
     document.getElementById('process-button').onclick = () => { this.handleProcess(); };
     document.getElementById('create-markers').onclick = () => { this.handleCreateMarkers('markers'); };
@@ -24,17 +33,48 @@ class App {
     }, 500);
   }
 
-  fillLanguageSelect() {
+  loadState() {
+    return this.getWebState().then((state) => {
+      if (state) {
+        this.state = JSON.parse(state);
+      }
+      return this.state;
+    });
+  }
+
+  saveState() {
+    if (this.state) {
+      return this.setWebState(JSON.stringify(this.state));
+    }
+    return Promise.resolve();
+  }
+
+  initLanguages() {
     this.getWhisperLanguages().then((languages) => {
       const select = document.getElementById('language-select');
+
       languages.forEach((language) => {
-        if (language.code === 'en') return;
         const option = document.createElement('option');
+        if (this.state.language === language.code) {
+          option.selected = true;
+        }
         option.value = language.code;
         option.innerText = language.name.charAt(0).toUpperCase() + language.name.slice(1);
         select.appendChild(option);
       });
+
+      select.onchange = () => {
+        this.state.language = select.options[select.selectedIndex].value;
+        this.saveState();
+      }
     });
+
+    const translateCheckbox = document.getElementById('translate-checkbox');
+    translateCheckbox.checked = this.state.translate;
+    translateCheckbox.onchange = () => {
+      this.state.translate = translateCheckbox.checked;
+      this.saveState();
+    }
   }
 
   handleProcess() {
