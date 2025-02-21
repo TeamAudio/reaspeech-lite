@@ -15,13 +15,15 @@ class App {
 
     this.state = {
       language: '',
-      translate: false
+      translate: false,
+      transcript: null
     };
   }
 
   init() {
     this.loadState().then(() => {
       this.initLanguages();
+      this.initTranscript();
     });
 
     document.getElementById('process-button').onclick = () => { this.handleProcess(); };
@@ -77,11 +79,23 @@ class App {
     }
   }
 
+  initTranscript() {
+    if (this.state.transcript) {
+      const groups = this.state.transcript.groups;
+      if (groups && groups.length > 0) {
+        this.showTranscript();
+        groups.forEach((group) => {
+          this.addSegments(group.segments, group.audioSource);
+        });
+      }
+    }
+  }
+
   handleProcess() {
     this.disableProcessButton();
     this.showSpinner();
     this.setProcessText('Processing...');
-    this.clearTable();
+    this.clearTranscript();
     this.hideTranscript();
 
     const languageSelect = document.getElementById('language-select');
@@ -98,6 +112,7 @@ class App {
           this.enableProcessButton();
           this.hideSpinner();
           this.setProcessText('Process');
+          this.saveState();
           return;
         }
 
@@ -107,6 +122,8 @@ class App {
           if (result.segments && result.segments.length > 0) {
             this.showTranscript();
             this.addSegments(result.segments, audioSource);
+            this.state.transcript = this.state.transcript || { groups: [] };
+            this.state.transcript.groups.push({ segments: result.segments, audioSource: audioSource });
           } else if (result.error) {
             this.showAlert('danger', '<b>Error:</b> ' + this.htmlEscape(result.error));
             audioSources.length = 0;
@@ -251,18 +268,21 @@ class App {
     document.getElementById('transcript').style.display = 'none';
   }
 
+  clearTranscript() {
+    const table = document.querySelector('#transcript table');
+    const tbody = table.querySelector('tbody');
+    tbody.innerHTML = '';
+
+    this.state.transcript = null;
+    this.saveState();
+  }
+
   htmlEscape(str) {
     return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
   small(html, className) {
     return `<small class="${className}">${html}</small>`;
-  }
-
-  clearTable() {
-    const table = document.querySelector('#transcript table');
-    const tbody = table.querySelector('tbody');
-    tbody.innerHTML = '';
   }
 
   addSegments(segments, audioSource) {
