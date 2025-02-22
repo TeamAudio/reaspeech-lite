@@ -3,6 +3,7 @@ class App {
     this.canCreateMarkers = getNativeFunction("canCreateMarkers");
     this.createMarkers = getNativeFunction("createMarkers");
     this.getAudioSources = getNativeFunction("getAudioSources");
+    this.getModels = getNativeFunction("getModels");
     this.getRegionSequences = getNativeFunction("getRegionSequences");
     this.getTranscriptionStatus = getNativeFunction("getTranscriptionStatus");
     this.getWebState = getNativeFunction("getWebState");
@@ -14,6 +15,7 @@ class App {
     this.transcribeAudioSource = getNativeFunction("transcribeAudioSource");
 
     this.state = {
+      modelName: 'small',
       language: '',
       translate: false,
       transcript: null
@@ -22,6 +24,7 @@ class App {
 
   init() {
     this.loadState().then(() => {
+      this.initModels();
       this.initLanguages();
       this.initTranscript();
     });
@@ -49,6 +52,25 @@ class App {
       return this.setWebState(JSON.stringify(this.state));
     }
     return Promise.resolve();
+  }
+
+  initModels() {
+    this.getModels().then((models) => {
+      const select = document.getElementById('model-select');
+
+      models.forEach((model) => {
+        const option = document.createElement('option');
+        option.selected = (this.state.modelName === model.name);
+        option.value = model.name;
+        option.innerText = model.label;
+        select.appendChild(option);
+      });
+
+      select.onchange = () => {
+        this.state.modelName = select.options[select.selectedIndex].value;
+        this.saveState();
+      };
+    });
   }
 
   initLanguages() {
@@ -100,6 +122,7 @@ class App {
     const languageCode = languageSelect.options[languageSelect.selectedIndex].value;
     const translate = document.getElementById('translate-checkbox').checked;
     const asrOptions = {
+      modelName: this.state.modelName,
       language: languageCode,
       translate: translate
     };

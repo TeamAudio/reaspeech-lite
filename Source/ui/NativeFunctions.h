@@ -39,6 +39,7 @@ public:
             .withNativeFunction ("canCreateMarkers", bindFn (&NativeFunctions::canCreateMarkers))
             .withNativeFunction ("createMarkers", bindFn (&NativeFunctions::createMarkers))
             .withNativeFunction ("getAudioSources", bindFn (&NativeFunctions::getAudioSources))
+            .withNativeFunction ("getModels", bindFn (&NativeFunctions::getModels))
             .withNativeFunction ("getRegionSequences", bindFn (&NativeFunctions::getRegionSequences))
             .withNativeFunction ("getTranscriptionStatus", bindFn (&NativeFunctions::getTranscriptionStatus))
             .withNativeFunction ("getWebState", bindFn (&NativeFunctions::getWebState))
@@ -118,6 +119,19 @@ public:
             return;
         }
         complete (makeError ("Document not found"));
+    }
+
+    void getModels (const juce::var&, std::function<void (const juce::var&)> complete)
+    {
+        juce::Array<juce::var> models;
+        for (const auto& model : Config::models)
+        {
+            juce::DynamicObject::Ptr modelObj = new juce::DynamicObject();
+            modelObj->setProperty ("name", juce::String(model.first));
+            modelObj->setProperty ("label", juce::String(model.second));
+            models.add (modelObj.get());
+        }
+        complete (juce::var (models));
     }
 
     void getRegionSequences (const juce::var&, std::function<void (const juce::var&)> complete)
@@ -259,6 +273,8 @@ public:
             const auto optionsObj = args[1].getDynamicObject();
             if (optionsObj != nullptr)
             {
+                if (optionsObj->hasProperty ("modelName"))
+                    options->modelName = optionsObj->getProperty ("modelName");
                 if (optionsObj->hasProperty ("language"))
                     options->language = optionsObj->getProperty ("language");
                 if (optionsObj->hasProperty ("translate"))
@@ -271,7 +287,6 @@ public:
         {
             auto* job = new ASRThreadPoolJob (
                 *asrEngine,
-                Config::modelName,
                 audioSource,
                 std::move(options),
                 [this] (ASRThreadPoolJobStatus status) {
