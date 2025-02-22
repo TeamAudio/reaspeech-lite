@@ -285,7 +285,7 @@ public:
                         juce::DynamicObject::Ptr obj = new juce::DynamicObject();
                         juce::Array<juce::var> segments;
                         for (const auto& segment : result.segments)
-                            segments.add (segment.toDynamicObject().get());
+                            segments.add (segment.toDynamicObject(false).get());
                         obj->setProperty ("segments", segments);
                         complete (juce::var (obj));
                     }

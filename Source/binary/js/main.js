@@ -357,22 +357,13 @@ class App {
   }
 
   formatScore(segment, className) {
-    const score = this.calcScore(segment);
+    const score = segment.score;
     const color = this.scoreColor(score);
     const percentage = score * 100;
     return `\
 <div class="progress" style="height: 2px">
   <div class="progress-bar ${className}" style="width: ${percentage}%; background-color: ${color}"></div>
 </div>`;
-  }
-
-  calcScore(segment) {
-    if (!segment.words || segment.words.length === 0) {
-      return 0;
-    }
-    let score = 0;
-    segment.words.forEach((word) => (score += word.probability));
-    return score / segment.words.length;
   }
 
   scoreColor(value) {
