@@ -296,12 +296,13 @@ class App {
   addRows(rows) {
     const table = document.querySelector('#transcript table');
     const tbody = table.querySelector('tbody');
+    const fragment = document.createDocumentFragment();
 
     rows.forEach(row => {
       const tr = document.createElement('tr');
       tr.className = 'segment align-middle';
 
-      row.forEach((cell, index) => {
+      const cells = row.map((cell, index) => {
         const td = document.createElement('td');
         td.innerHTML = cell;
 
@@ -309,14 +310,17 @@ class App {
           // Truncate audio source name with tooltip
           td.className = 'text-muted text-truncate';
           td.style = 'max-width: 200px;';
-          td.title = td.innerText;
+          td.title = td.textContent;
         }
 
-        tr.appendChild(td);
+        return td;
       });
 
-      tbody.appendChild(tr);
+      tr.append(...cells);
+      fragment.appendChild(tr);
     });
+
+    tbody.appendChild(fragment);
   }
 
   formatText(text, className) {
