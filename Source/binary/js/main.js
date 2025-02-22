@@ -5,15 +5,26 @@ class App {
     this.getAudioSources = getNativeFunction("getAudioSources");
     this.getRegionSequences = getNativeFunction("getRegionSequences");
     this.getTranscriptionStatus = getNativeFunction("getTranscriptionStatus");
+    this.getWebState = getNativeFunction("getWebState");
     this.getWhisperLanguages = getNativeFunction("getWhisperLanguages");
     this.play = getNativeFunction("play");
     this.stop = getNativeFunction("stop");
     this.setPlaybackPosition = getNativeFunction("setPlaybackPosition");
+    this.setWebState = getNativeFunction("setWebState");
     this.transcribeAudioSource = getNativeFunction("transcribeAudioSource");
+
+    this.state = {
+      language: '',
+      translate: false,
+      transcript: null
+    };
   }
 
   init() {
-    this.fillLanguageSelect();
+    this.loadState().then(() => {
+      this.initLanguages();
+      this.initTranscript();
+    });
 
     document.getElementById('process-button').onclick = () => { this.handleProcess(); };
     document.getElementById('create-markers').onclick = () => { this.handleCreateMarkers('markers'); };
@@ -24,24 +35,65 @@ class App {
     }, 500);
   }
 
-  fillLanguageSelect() {
+  loadState() {
+    return this.getWebState().then((state) => {
+      if (state) {
+        this.state = JSON.parse(state);
+      }
+      return this.state;
+    });
+  }
+
+  saveState() {
+    if (this.state) {
+      return this.setWebState(JSON.stringify(this.state));
+    }
+    return Promise.resolve();
+  }
+
+  initLanguages() {
     this.getWhisperLanguages().then((languages) => {
       const select = document.getElementById('language-select');
+
       languages.forEach((language) => {
-        if (language.code === 'en') return;
         const option = document.createElement('option');
+        option.selected = (this.state.language === language.code);
         option.value = language.code;
         option.innerText = language.name.charAt(0).toUpperCase() + language.name.slice(1);
         select.appendChild(option);
       });
+
+      select.onchange = () => {
+        this.state.language = select.options[select.selectedIndex].value;
+        this.saveState();
+      }
     });
+
+    const translateCheckbox = document.getElementById('translate-checkbox');
+    translateCheckbox.checked = this.state.translate;
+    translateCheckbox.onchange = () => {
+      this.state.translate = translateCheckbox.checked;
+      this.saveState();
+    }
+  }
+
+  initTranscript() {
+    if (this.state.transcript) {
+      const groups = this.state.transcript.groups;
+      if (groups && groups.length > 0) {
+        this.showTranscript();
+        groups.forEach((group) => {
+          this.addSegments(group.segments, group.audioSource);
+        });
+      }
+    }
   }
 
   handleProcess() {
     this.disableProcessButton();
     this.showSpinner();
     this.setProcessText('Processing...');
-    this.clearTable();
+    this.clearTranscript();
     this.hideTranscript();
 
     const languageSelect = document.getElementById('language-select');
@@ -58,6 +110,7 @@ class App {
           this.enableProcessButton();
           this.hideSpinner();
           this.setProcessText('Process');
+          this.saveState();
           return;
         }
 
@@ -67,6 +120,8 @@ class App {
           if (result.segments && result.segments.length > 0) {
             this.showTranscript();
             this.addSegments(result.segments, audioSource);
+            this.state.transcript = this.state.transcript || { groups: [] };
+            this.state.transcript.groups.push({ segments: result.segments, audioSource: audioSource });
           } else if (result.error) {
             this.showAlert('danger', '<b>Error:</b> ' + this.htmlEscape(result.error));
             audioSources.length = 0;
@@ -211,18 +266,21 @@ class App {
     document.getElementById('transcript').style.display = 'none';
   }
 
+  clearTranscript() {
+    const table = document.querySelector('#transcript table');
+    const tbody = table.querySelector('tbody');
+    tbody.innerHTML = '';
+
+    this.state.transcript = null;
+    this.saveState();
+  }
+
   htmlEscape(str) {
     return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
   small(html, className) {
     return `<small class="${className}">${html}</small>`;
-  }
-
-  clearTable() {
-    const table = document.querySelector('#transcript table');
-    const tbody = table.querySelector('tbody');
-    tbody.innerHTML = '';
   }
 
   addSegments(segments, audioSource) {

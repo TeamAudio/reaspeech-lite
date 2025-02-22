@@ -10,7 +10,10 @@ class ReaSpeechLiteAudioProcessorImpl :
     public juce::AudioProcessorARAExtension
 {
 public:
-    ReaSpeechLiteAudioProcessorImpl() : AudioProcessor (getBusesProperties()) {}
+    ReaSpeechLiteAudioProcessorImpl() : AudioProcessor (getBusesProperties())
+    {
+        state.setProperty ("webState", juce::var(), nullptr);
+    }
 
     ~ReaSpeechLiteAudioProcessorImpl() override = default;
 
@@ -68,23 +71,22 @@ public:
 
     void getStateInformation (juce::MemoryBlock& destData) override
     {
-        // Use this method as the place to do any pre-playback
-        // initialisation that you need..
-        juce::ignoreUnused (destData);
+        if (auto xmlState = state.createXml())
+            copyXmlToBinary (*xmlState, destData);
     }
 
     void setStateInformation (const void* data, int sizeInBytes) override
     {
-        // When playback stops, you can use this as an opportunity to free up any
-        // spare memory, etc.
-        juce::ignoreUnused (data);
-        juce::ignoreUnused (sizeInBytes);
+        if (auto xmlState = getXmlFromBinary (data, sizeInBytes))
+            state = juce::ValueTree::fromXml (*xmlState);
     }
 
     juce::VST3ClientExtensions* getVST3ClientExtensions() override { return &vst3Extensions; }
 
     ReaperProxy reaperProxy;
     VST3Extensions vst3Extensions { reaperProxy };
+
+    juce::ValueTree state { "state" };
 
 private:
     static BusesProperties getBusesProperties()

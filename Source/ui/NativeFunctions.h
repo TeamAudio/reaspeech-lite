@@ -41,10 +41,12 @@ public:
             .withNativeFunction ("getAudioSources", bindFn (&NativeFunctions::getAudioSources))
             .withNativeFunction ("getRegionSequences", bindFn (&NativeFunctions::getRegionSequences))
             .withNativeFunction ("getTranscriptionStatus", bindFn (&NativeFunctions::getTranscriptionStatus))
+            .withNativeFunction ("getWebState", bindFn (&NativeFunctions::getWebState))
             .withNativeFunction ("getWhisperLanguages", bindFn (&NativeFunctions::getWhisperLanguages))
             .withNativeFunction ("play", bindFn (&NativeFunctions::play))
             .withNativeFunction ("stop", bindFn (&NativeFunctions::stop))
             .withNativeFunction ("setPlaybackPosition", bindFn (&NativeFunctions::setPlaybackPosition))
+            .withNativeFunction ("setWebState", bindFn (&NativeFunctions::setWebState))
             .withNativeFunction ("transcribeAudioSource", bindFn (&NativeFunctions::transcribeAudioSource));
     }
 
@@ -175,6 +177,11 @@ public:
         complete (juce::var (status));
     }
 
+    void getWebState (const juce::var&, std::function<void (const juce::var&)> complete)
+    {
+        complete (audioProcessor.state.getProperty ("webState"));
+    }
+
     void getWhisperLanguages (const juce::var&, std::function<void (const juce::var&)> complete)
     {
         complete (juce::var (WhisperLanguages::get()));
@@ -218,6 +225,18 @@ public:
             return;
         }
         complete (makeError ("Playback controller not found"));
+    }
+
+    void setWebState (const juce::var& args, std::function<void (const juce::var&)> complete)
+    {
+        if (! args.isArray() || args.size() < 1 || ! args[0].isString())
+        {
+            complete (makeError ("Invalid arguments"));
+            return;
+        }
+
+        audioProcessor.state.setProperty ("webState", args[0], nullptr);
+        complete (juce::var());
     }
 
     void transcribeAudioSource (const juce::var& args, std::function<void (const juce::var&)> complete)
