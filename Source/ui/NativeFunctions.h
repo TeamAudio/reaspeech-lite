@@ -17,9 +17,9 @@ class NativeFunctions : public OptionsBuilder<juce::WebBrowserComponent::Options
 {
 public:
     NativeFunctions (
-        juce::AudioProcessorEditorARAExtension& editorIn,
+        juce::ARAEditorView& editorViewIn,
         ReaSpeechLiteAudioProcessorImpl& audioProcessorIn
-    ) : editor (editorIn),
+    ) : editorView (editorViewIn),
         audioProcessor (audioProcessorIn)
     {
         asrEngine = std::make_unique<ASREngine> (Config::getModelsDir());
@@ -281,9 +281,7 @@ public:
 private:
     ReaSpeechLiteDocumentController* getDocumentController()
     {
-        if (auto* editorView = editor.getARAEditorView())
-            return ReaSpeechLiteDocumentController::get (*editorView);
-        return nullptr;
+        return ReaSpeechLiteDocumentController::get (editorView);
     }
 
     ARA::PlugIn::HostPlaybackController* getPlaybackController()
@@ -336,7 +334,7 @@ private:
             rpr.PreventUIRefresh(-1);
     }
 
-    juce::AudioProcessorEditorARAExtension& editor;
+    juce::ARAEditorView& editorView;
     ReaSpeechLiteAudioProcessorImpl& audioProcessor;
     ReaperProxy& rpr { audioProcessor.reaperProxy };
 

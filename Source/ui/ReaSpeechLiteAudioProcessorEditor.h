@@ -13,13 +13,26 @@ class ReaSpeechLiteAudioProcessorEditor final :
 public:
     ReaSpeechLiteAudioProcessorEditor (ReaSpeechLiteAudioProcessorImpl& p) :
         AudioProcessorEditor (&p),
-        AudioProcessorEditorARAExtension (&p),
-        audioProcessor (p)
+        AudioProcessorEditorARAExtension (&p)
     {
-        addAndMakeVisible (webComponent);
+        if (auto* editorView = getARAEditorView())
+        {
+            nativeFunctions = std::make_unique<NativeFunctions> (*editorView, p);
 
-        // Navigate to index page
-        webComponent.goToURL (juce::WebBrowserComponent::getResourceProviderRoot());
+            webComponent = std::make_unique<juce::WebBrowserComponent> (
+                juce::WebBrowserComponent::Options{}
+                    .withBackend (juce::WebBrowserComponent::Options::Backend::webview2)
+                    .withWinWebView2Options (juce::WebBrowserComponent::Options::WinWebView2{}
+                        .withUserDataFolder (juce::File::getSpecialLocation (juce::File::SpecialLocationType::tempDirectory)))
+                    .withResourceProvider ([] (const auto& url) { return Resources::get (url); })
+                    .withNativeIntegrationEnabled()
+                    .withOptionsFrom (*nativeFunctions)
+            );
+            addAndMakeVisible (*webComponent);
+
+            // Navigate to index page
+            webComponent->goToURL (juce::WebBrowserComponent::getResourceProviderRoot());
+        }
 
         // ARA plugins must be resizable for proper view embedding
         setResizable (true, false);
@@ -33,28 +46,28 @@ public:
 
     void paint (juce::Graphics& g) override
     {
-        // (Our component is opaque, so we must completely fill the background with a solid colour)
         g.fillAll (getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
+
+        if (! isARAEditorView())
+        {
+            g.setColour (juce::Colours::white);
+            g.setFont (juce::FontOptions (15.0f));
+            g.drawFittedText ("ARA host isn't detected. This plugin only supports ARA mode.",
+                              getLocalBounds(),
+                              juce::Justification::centred,
+                              1);
+        }
     }
 
     void resized() override
     {
-        webComponent.setBounds (getLocalBounds());
+        if (webComponent != nullptr)
+            webComponent->setBounds (getLocalBounds());
     }
 
 private:
-    ReaSpeechLiteAudioProcessorImpl& audioProcessor;
-    NativeFunctions nativeFunctions { *this, audioProcessor };
-
-    juce::WebBrowserComponent webComponent {
-        juce::WebBrowserComponent::Options{}
-            .withBackend (juce::WebBrowserComponent::Options::Backend::webview2)
-            .withWinWebView2Options (juce::WebBrowserComponent::Options::WinWebView2{}
-                .withUserDataFolder (juce::File::getSpecialLocation (juce::File::SpecialLocationType::tempDirectory)))
-            .withResourceProvider ([] (const auto& url) { return Resources::get (url); })
-            .withNativeIntegrationEnabled()
-            .withOptionsFrom (nativeFunctions)
-    };
+    std::unique_ptr<NativeFunctions> nativeFunctions;
+    std::unique_ptr<juce::WebBrowserComponent> webComponent;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ReaSpeechLiteAudioProcessorEditor)
 };
