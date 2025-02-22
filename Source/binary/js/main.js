@@ -57,9 +57,7 @@ class App {
 
       languages.forEach((language) => {
         const option = document.createElement('option');
-        if (this.state.language === language.code) {
-          option.selected = true;
-        }
+        option.selected = (this.state.language === language.code);
         option.value = language.code;
         option.innerText = language.name.charAt(0).toUpperCase() + language.name.slice(1);
         select.appendChild(option);
