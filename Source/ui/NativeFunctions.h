@@ -42,7 +42,6 @@ public:
             .withNativeFunction ("getModels", bindFn (&NativeFunctions::getModels))
             .withNativeFunction ("getRegionSequences", bindFn (&NativeFunctions::getRegionSequences))
             .withNativeFunction ("getTranscriptionStatus", bindFn (&NativeFunctions::getTranscriptionStatus))
-            .withNativeFunction ("getWebState", bindFn (&NativeFunctions::getWebState))
             .withNativeFunction ("getWhisperLanguages", bindFn (&NativeFunctions::getWhisperLanguages))
             .withNativeFunction ("play", bindFn (&NativeFunctions::play))
             .withNativeFunction ("stop", bindFn (&NativeFunctions::stop))
@@ -189,11 +188,6 @@ public:
                 break;
         }
         complete (juce::var (status));
-    }
-
-    void getWebState (const juce::var&, std::function<void (const juce::var&)> complete)
-    {
-        complete (audioProcessor.state.getProperty ("webState"));
     }
 
     void getWhisperLanguages (const juce::var&, std::function<void (const juce::var&)> complete)
