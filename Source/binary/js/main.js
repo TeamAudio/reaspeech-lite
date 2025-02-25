@@ -6,7 +6,6 @@ class App {
     this.getModels = getNativeFunction("getModels");
     this.getRegionSequences = getNativeFunction("getRegionSequences");
     this.getTranscriptionStatus = getNativeFunction("getTranscriptionStatus");
-    this.getWebState = getNativeFunction("getWebState");
     this.getWhisperLanguages = getNativeFunction("getWhisperLanguages");
     this.play = getNativeFunction("play");
     this.stop = getNativeFunction("stop");
@@ -39,12 +38,12 @@ class App {
   }
 
   loadState() {
-    return this.getWebState().then((state) => {
-      if (state) {
-        this.state = JSON.parse(state);
-      }
-      return this.state;
-    });
+    try {
+      this.state = JSON.parse(window.__JUCE__.initialisationData.webState);
+    } catch (e) {
+      console.warn('Failed to parse web state:', e);
+    }
+    return Promise.resolve();
   }
 
   saveState() {

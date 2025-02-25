@@ -25,6 +25,7 @@ public:
                     .withWinWebView2Options (juce::WebBrowserComponent::Options::WinWebView2{}
                         .withUserDataFolder (juce::File::getSpecialLocation (juce::File::SpecialLocationType::tempDirectory)))
                     .withResourceProvider ([] (const auto& url) { return Resources::get (url); })
+                    .withInitialisationData ("webState", p.state.getProperty ("webState", juce::var()).toString())
                     .withNativeIntegrationEnabled()
                     .withOptionsFrom (*nativeFunctions)
             );
