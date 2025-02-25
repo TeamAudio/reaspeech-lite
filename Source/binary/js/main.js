@@ -3,6 +3,7 @@ class App {
     this.canCreateMarkers = getNativeFunction("canCreateMarkers");
     this.createMarkers = getNativeFunction("createMarkers");
     this.getAudioSources = getNativeFunction("getAudioSources");
+    this.getModels = getNativeFunction("getModels");
     this.getRegionSequences = getNativeFunction("getRegionSequences");
     this.getTranscriptionStatus = getNativeFunction("getTranscriptionStatus");
     this.getWebState = getNativeFunction("getWebState");
@@ -14,6 +15,7 @@ class App {
     this.transcribeAudioSource = getNativeFunction("transcribeAudioSource");
 
     this.state = {
+      modelName: 'small',
       language: '',
       translate: false,
       transcript: null
@@ -22,6 +24,7 @@ class App {
 
   init() {
     this.loadState().then(() => {
+      this.initModels();
       this.initLanguages();
       this.initTranscript();
     });
@@ -51,6 +54,25 @@ class App {
     return Promise.resolve();
   }
 
+  initModels() {
+    this.getModels().then((models) => {
+      const select = document.getElementById('model-select');
+
+      models.forEach((model) => {
+        const option = document.createElement('option');
+        option.selected = (this.state.modelName === model.name);
+        option.value = model.name;
+        option.innerText = model.label;
+        select.appendChild(option);
+      });
+
+      select.onchange = () => {
+        this.state.modelName = select.options[select.selectedIndex].value;
+        this.saveState();
+      };
+    });
+  }
+
   initLanguages() {
     this.getWhisperLanguages().then((languages) => {
       const select = document.getElementById('language-select');
@@ -66,7 +88,7 @@ class App {
       select.onchange = () => {
         this.state.language = select.options[select.selectedIndex].value;
         this.saveState();
-      }
+      };
     });
 
     const translateCheckbox = document.getElementById('translate-checkbox');
@@ -74,7 +96,7 @@ class App {
     translateCheckbox.onchange = () => {
       this.state.translate = translateCheckbox.checked;
       this.saveState();
-    }
+    };
   }
 
   initTranscript() {
@@ -100,6 +122,7 @@ class App {
     const languageCode = languageSelect.options[languageSelect.selectedIndex].value;
     const translate = document.getElementById('translate-checkbox').checked;
     const asrOptions = {
+      modelName: this.state.modelName,
       language: languageCode,
       translate: translate
     };
@@ -189,9 +212,10 @@ class App {
           segments.forEach((segment) => {
             const source = segment.querySelector('.segment-source');
 
-            if (source.dataset.audioSourcePersistentId === audioSourcePersistentID) {
+            if (source.dataset.persistentId === audioSourcePersistentID) {
               const startElement = segment.querySelector('.segment-start');
               const endElement = segment.querySelector('.segment-end');
+              const textElement = segment.querySelector('.segment-text');
               const segmentStart = parseFloat(startElement.dataset.segmentTime);
               const segmentEnd = parseFloat(endElement.dataset.segmentTime);
 
@@ -201,11 +225,13 @@ class App {
               if (start < playbackStart || start > playbackEnd) {
                 startElement.dataset.playbackStart = '';
                 startElement.dataset.playbackEnd = '';
+                textElement.dataset.playbackStart = '';
                 startElement.innerText = '';
                 endElement.innerText = '';
               } else {
                 startElement.dataset.playbackStart = start;
                 endElement.dataset.playbackEnd = end;
+                textElement.dataset.playbackStart = start;
                 startElement.innerText = this.timestampToString(start);
                 endElement.innerText = this.timestampToString(end);
               }
@@ -244,7 +270,7 @@ class App {
       `   <div>${message}</div>`,
       '   <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>',
       '</div>'
-    ].join('')
+    ].join('');
     alerts.append(wrapper);
   }
 
@@ -275,33 +301,26 @@ class App {
     this.saveState();
   }
 
-  htmlEscape(str) {
-    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  }
-
-  small(html, className) {
-    return `<small class="${className}">${html}</small>`;
-  }
-
   addSegments(segments, audioSource) {
     this.addRows(segments.map((segment) => [
-      this.small(this.formatTimestamp(segment.start, 'segment-start'), 'text-muted'),
-      this.small(this.formatTimestamp(segment.end, 'segment-end'), 'text-muted'),
+      this.formatStartTime(segment.start, 'segment-start small'),
+      this.formatEndTime(segment.end, 'segment-end small text-muted'),
       this.formatText(segment.text, 'segment-text'),
       this.formatScore(segment, 'segment-score'),
-      this.small(this.formatSource(audioSource.name, 'segment-source', audioSource.persistentID), ''),
+      this.formatSource(audioSource.name, 'segment-source small', audioSource.persistentID),
     ]));
   }
 
   addRows(rows) {
     const table = document.querySelector('#transcript table');
     const tbody = table.querySelector('tbody');
+    const fragment = document.createDocumentFragment();
 
     rows.forEach(row => {
       const tr = document.createElement('tr');
       tr.className = 'segment align-middle';
 
-      row.forEach((cell, index) => {
+      const cells = row.map((cell, index) => {
         const td = document.createElement('td');
         td.innerHTML = cell;
 
@@ -309,31 +328,50 @@ class App {
           // Truncate audio source name with tooltip
           td.className = 'text-muted text-truncate';
           td.style = 'max-width: 200px;';
-          td.title = td.innerText;
+          td.title = td.textContent;
         }
 
-        tr.appendChild(td);
+        return td;
       });
 
-      tbody.appendChild(tr);
+      tr.append(...cells);
+      fragment.appendChild(tr);
     });
+
+    tbody.appendChild(fragment);
+  }
+
+  formatStartTime(segmentTime, className) {
+    const linkClasses = 'link-offset-2 link-underline link-underline-opacity-0 link-underline-opacity-50-hover';
+    return `<a href="javascript:" onclick="app.playSegment(this)" class="${className} ${linkClasses}" data-segment-time="${segmentTime}">${this.timestampToString(segmentTime)}</a>`;
+  }
+
+  formatEndTime(segmentTime, className) {
+    return `<span class="${className}" data-segment-time="${segmentTime}">${this.timestampToString(segmentTime)}</span>`;
   }
 
   formatText(text, className) {
-    return `<div class="${className}">${this.htmlEscape(text)}</div>`;
+    const linkClasses = 'link-light link-offset-2 link-underline link-underline-opacity-0 link-underline-opacity-50-hover';
+    return `<a href="javascript:" onclick="app.playSegment(this)" class="${className} ${linkClasses}">${this.htmlEscape(text)}</a>`;
+  }
+
+  formatScore(segment, className) {
+    const score = segment.score;
+    const color = this.scoreColor(score);
+    const percentage = score * 100;
+    return [
+      '<div class="progress" style="height: 2px">',
+      `  <div class="progress-bar ${className}" style="width: ${percentage}%; background-color: ${color}"></div>`,
+      '</div>'
+    ].join('');
   }
 
   formatSource(text, className, audioSourcePersistentID) {
-    return `<span class="${className}" data-audio-source-persistent-id="${this.htmlEscape(audioSourcePersistentID)}">${this.htmlEscape(text)}</span>`;
+    return `<span class="${className}" data-persistent-id="${this.htmlEscape(audioSourcePersistentID)}">${this.htmlEscape(text)}</span>`;
   }
 
-  formatTimestamp(segmentTime, className) {
-    if (className === 'segment-start') {
-      const linkClasses = 'link-offset-2 link-underline link-underline-opacity-0 link-underline-opacity-50-hover';
-      return `<a href="javascript:" onclick="app.playSegment(this)" class="${className} ${linkClasses}" data-segment-time="${segmentTime}">${this.timestampToString(segmentTime)}</a>`;
-    } else {
-      return `<span class="${className}" data-segment-time="${segmentTime}">${this.timestampToString(segmentTime)}</span>`;
-    }
+  htmlEscape(str) {
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
   playSegment(segment) {
@@ -348,33 +386,6 @@ class App {
     });
   }
 
-  // Return a string of the form M:SS.mmm
-  timestampToString(seconds) {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds - minutes * 60;
-    const milliseconds = Math.round((remainingSeconds - Math.floor(remainingSeconds)) * 1000);
-    return `${minutes}:${String(Math.floor(remainingSeconds)).padStart(2, '0')}.${String(milliseconds).padStart(3, '0')}`;
-  }
-
-  formatScore(segment, className) {
-    const score = this.calcScore(segment);
-    const color = this.scoreColor(score);
-    const percentage = score * 100;
-    return `\
-<div class="progress" style="height: 2px">
-  <div class="progress-bar ${className}" style="width: ${percentage}%; background-color: ${color}"></div>
-</div>`;
-  }
-
-  calcScore(segment) {
-    if (!segment.words || segment.words.length === 0) {
-      return 0;
-    }
-    let score = 0;
-    segment.words.forEach((word) => (score += word.probability));
-    return score / segment.words.length;
-  }
-
   scoreColor(value) {
     if (value > 0.9) {
       return "#a3ff00";
@@ -387,6 +398,14 @@ class App {
     } else {
       return "transparent";
     }
+  }
+
+  // Return a string of the form M:SS.mmm
+  timestampToString(seconds) {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds - minutes * 60;
+    const milliseconds = Math.round((remainingSeconds - Math.floor(remainingSeconds)) * 1000);
+    return `${minutes}:${String(Math.floor(remainingSeconds)).padStart(2, '0')}.${String(milliseconds).padStart(3, '0')}`;
   }
 }
 

@@ -30,14 +30,12 @@ class ASRThreadPoolJob final : public juce::ThreadPoolJob
 public:
     ASRThreadPoolJob(
         ASREngine& asrEngineIn,
-        std::string modelNameIn,
         juce::ARAAudioSource* audioSourceIn,
         std::unique_ptr<ASROptions> optionsIn,
         std::function<void (ASRThreadPoolJobStatus)> onStatus,
         std::function<void (const ASRThreadPoolJobResult&)> onComplete
     ) : ThreadPoolJob ("ASR Threadpool Job"),
         asrEngine (asrEngineIn),
-        modelName (modelNameIn),
         audioSource (audioSourceIn),
         options (std::move (optionsIn)),
         onStatusCallback (onStatus),
@@ -59,7 +57,7 @@ public:
         DBG ("Loading model");
         onStatusCallback (ASRThreadPoolJobStatus::loadingModel);
 
-        if (! asrEngine.loadModel (modelName))
+        if (! asrEngine.loadModel (options->modelName.toStdString()))
         {
             onStatusCallback (ASRThreadPoolJobStatus::failed);
             onCompleteCallback ({ true, "Failed to load model", {} });
@@ -97,7 +95,6 @@ public:
 
 private:
     ASREngine& asrEngine;
-    std::string modelName;
     juce::ARAAudioSource* audioSource;
     std::unique_ptr<ASROptions> options;
     std::function<void (ASRThreadPoolJobStatus)> onStatusCallback;

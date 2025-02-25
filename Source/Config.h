@@ -4,7 +4,12 @@
 
 struct Config
 {
-    static inline const std::string modelName = "small";
+    static inline const std::vector<std::pair<std::string, std::string>> models = {
+        { "small", "Small" },
+        { "medium", "Medium" },
+        { "large-v3", "Large" },
+        { "large-v3-turbo", "Turbo" }
+    };
 
     static const juce::URL getModelURL (std::string modelNameIn)
     {
