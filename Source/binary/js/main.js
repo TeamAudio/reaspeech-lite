@@ -127,8 +127,15 @@ class App {
     };
 
     this.getAudioSources().then((audioSources) => {
+      this.transcriptionStartTime = new Date().getTime();
+
       const processNextAudioSource = () => {
         if (audioSources.length === 0) {
+          if (this.transcriptionStartTime) {
+            const transcriptionTime = new Date().getTime() - this.transcriptionStartTime;
+            const transcriptionTimeInSeconds = (transcriptionTime / 1000).toFixed(1);
+            this.showAlert('info', `Transcription completed in ${transcriptionTimeInSeconds} seconds`);
+          }
           this.enableProcessButton();
           this.hideSpinner();
           this.setProcessText('Process');

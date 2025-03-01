@@ -71,8 +71,7 @@ public:
             downloadTask.reset();
         }
 
-        whisper_context_params params;
-        params.use_gpu = true;
+        whisper_context_params params = Config::getWhisperContextParams();
 
         ctx = whisper_init_from_file_with_params (modelPath.c_str(), params);
         if (ctx == nullptr)
@@ -100,8 +99,7 @@ public:
             return false;
         }
 
-        whisper_full_params params = whisper_full_default_params (WHISPER_SAMPLING_GREEDY);
-        params.token_timestamps = true;
+        whisper_full_params params = Config::getWhisperFullParams();
         params.language = options.language.toStdString().c_str();
         params.translate = options.translate;
 
