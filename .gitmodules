@@ -7,3 +7,6 @@
 [submodule "whisper.cpp"]
 	path = whisper.cpp
 	url = https://github.com/ggerganov/whisper.cpp.git
+[submodule "cmake"]
+	path = cmake
+	url = https://github.com/sudara/cmake-includes.git
