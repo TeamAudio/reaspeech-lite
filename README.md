@@ -1,4 +1,4 @@
-# reaspeech-lite
+# ReaSpeechLite
 
 Speech-to-text transcription VST3/ARA plugin
 
@@ -8,12 +8,15 @@ Speech-to-text transcription VST3/ARA plugin
 
 ## CMake initialization
 
-    mkdir build
     cmake -B build -DCMAKE_BUILD_TYPE=Debug
 
 For Windows/CUDA, use:
 
     cmake -B build -DCMAKE_BUILD_TYPE=Debug -DGGML_CUDA=1
+
+For Linux/CUDA, use:
+
+    cmake -B build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DGGML_CUDA=1
 
 ## Building
 
