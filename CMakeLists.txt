@@ -149,8 +149,6 @@ else()
     )
 endif()
 
-juce_generate_juce_header(${PROJECT_NAME})
-
 # This lets us use our code in both the JUCE targets and our Test target
 # Without running into ODR violations
 add_library(SharedCode INTERFACE)
@@ -179,8 +177,6 @@ include(XcodePrettify)
 # This is where you can set preprocessor definitions for JUCE and your plugin
 target_compile_definitions(SharedCode
     INTERFACE
-
-    DONT_SET_USING_JUCE_NAMESPACE=1
 
     # JUCE_WEB_BROWSER and JUCE_USE_CURL off by default
     JUCE_WEB_BROWSER=1  # If you set this to 1, add `NEEDS_WEB_BROWSER TRUE` to the `juce_add_plugin` call

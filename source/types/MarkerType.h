@@ -1,5 +1,8 @@
 #pragma once
 
+#include <optional>
+#include <string>
+
 struct MarkerType
 {
     enum Enum

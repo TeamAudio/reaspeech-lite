@@ -1,7 +1,7 @@
 #pragma once
 
-#include <JuceHeader.h>
-#include <stdexcept>
+#include <exception>
+#include <juce_core/juce_core.h>
 
 #include "IReaperHostApplication.h"
 

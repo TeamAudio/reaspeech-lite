@@ -1,6 +1,7 @@
 #pragma once
 
-#include <JuceHeader.h>
+#include <string>
+#include <juce_core/juce_core.h>
 
 struct SafeUTF8
 {
