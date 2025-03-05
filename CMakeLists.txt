@@ -32,7 +32,7 @@ set(PRODUCT_NAME "ReaSpeechLite")
 set(COMPANY_NAME "TechAudio")
 
 # Change me! Used for the MacOS bundle identifier (and signing)
-set(BUNDLE_ID "io.techaud.reaspeech-lite")
+set(BUNDLE_ID "com.TechAudio.ReaSpeechLite")
 
 # Change me! Set the plugin formats you want built
 # Valid choices: AAX Unity VST VST3 AU AUv3 Standalone
@@ -95,7 +95,6 @@ juce_add_plugin("${PROJECT_NAME}"
     COMPANY_NAME "${COMPANY_NAME}"
     COMPANY_WEBSITE https://techaud.io
     BUNDLE_ID "${BUNDLE_ID}"
-    ARA_FACTORY_ID "${BUNDLE_ID}"
 
     # On MacOS, plugin is copied to /Users/yourname/Library/Audio/Plug-Ins/
     # COPY_PLUGIN_AFTER_BUILD TRUE
