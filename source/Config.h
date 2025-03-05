@@ -1,6 +1,9 @@
 #pragma once
 
-#include <JuceHeader.h>
+#include <string>
+#include <vector>
+
+#include <juce_core/juce_core.h>
 
 struct Config
 {

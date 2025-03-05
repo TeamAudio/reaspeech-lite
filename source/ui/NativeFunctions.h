@@ -1,7 +1,12 @@
 #pragma once
 
-#include <JuceHeader.h>
 #include <atomic>
+#include <functional>
+#include <memory>
+
+#include <juce_audio_processors/juce_audio_processors.h>
+#include <juce_core/juce_core.h>
+#include <juce_gui_extra/juce_gui_extra.h>
 
 #include "../Config.h"
 #include "../asr/ASREngine.h"

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <JuceHeader.h>
+#include <juce_core/juce_core.h>
 
 class SharedTimeSliceThread final : public juce::TimeSliceThread
 {

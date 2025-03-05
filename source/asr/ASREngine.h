@@ -1,6 +1,10 @@
 #pragma once
 
-#include <JuceHeader.h>
+#include <memory>
+#include <string>
+#include <vector>
+
+#include <juce_core/juce_core.h>
 #include <whisper.h>
 
 #include "../utils/SafeUTF8.h"

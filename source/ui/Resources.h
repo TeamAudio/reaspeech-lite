@@ -1,6 +1,13 @@
 #pragma once
 
-#include <JuceHeader.h>
+#include <optional>
+#include <unordered_map>
+#include <vector>
+
+#include <juce_core/juce_core.h>
+#include <juce_gui_extra/juce_gui_extra.h>
+
+#include "BinaryData.h"
 
 struct Resources
 {

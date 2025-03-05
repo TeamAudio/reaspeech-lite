@@ -1,6 +1,12 @@
 #pragma once
 
-#include <JuceHeader.h>
+#include <functional>
+#include <memory>
+#include <string>
+#include <vector>
+
+#include <juce_audio_processors/juce_audio_processors.h>
+#include <juce_core/juce_core.h>
 #include <whisper.h>
 
 #include "../utils/ResamplingExporter.h"

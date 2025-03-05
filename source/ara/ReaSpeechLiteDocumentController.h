@@ -1,6 +1,7 @@
 #pragma once
 
-#include <JuceHeader.h>
+#include <juce_audio_processors/juce_audio_processors.h>
+#include <juce_core/juce_core.h>
 
 #include "../types/ProcessingLockInterface.h"
 #include "ReaSpeechLitePlaybackRenderer.h"
