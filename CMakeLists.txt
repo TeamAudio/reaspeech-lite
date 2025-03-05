@@ -95,6 +95,7 @@ juce_add_plugin("${PROJECT_NAME}"
     COMPANY_NAME "${COMPANY_NAME}"
     COMPANY_WEBSITE https://techaud.io
     BUNDLE_ID "${BUNDLE_ID}"
+    ARA_FACTORY_ID "${BUNDLE_ID}"
 
     # On MacOS, plugin is copied to /Users/yourname/Library/Audio/Plug-Ins/
     # COPY_PLUGIN_AFTER_BUILD TRUE
