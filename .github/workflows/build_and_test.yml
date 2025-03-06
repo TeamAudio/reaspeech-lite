@@ -50,7 +50,7 @@ jobs:
             os: windows-latest
             pluginval-binary: ./pluginval.exe
             cuda: true
-            cuda-version: '12.2.0'
+            cuda-version: '12.8.0'
             extra-flags: -DGGML_CUDA=1
 
     steps:
@@ -200,7 +200,7 @@ jobs:
 
           # cd packaging
           # envsubst < distribution.xml.template > distribution.xml
-          # productbuild --resources ./resources --distribution distribution.xml --sign "${{ secrets.DEVELOPER_ID_INSTALLER }}" --timestamp "${{ env.ARTIFACT_NAME }}.pkg" 
+          # productbuild --resources ./resources --distribution distribution.xml --sign "${{ secrets.DEVELOPER_ID_INSTALLER }}" --timestamp "${{ env.ARTIFACT_NAME }}.pkg"
 
           # xcrun notarytool submit "${{ env.ARTIFACT_NAME }}.pkg" --apple-id ${{ secrets.NOTARIZATION_USERNAME }} --password ${{ secrets.NOTARIZATION_PASSWORD }} --team-id ${{ secrets.TEAM_ID }} --wait
           # xcrun stapler staple "${{ env.ARTIFACT_NAME }}.pkg"
@@ -243,7 +243,7 @@ jobs:
       #     files-folder-filter: exe
 
       - name: Upload Exe (Windows)
-        if: ${{ matrix.name == 'Windows' }}
+        if: ${{ matrix.name == 'Windows' || matrix.name == 'WindowsCUDA' }}
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.ARTIFACT_NAME }}.exe
