@@ -65,7 +65,7 @@ jobs:
       # Set up cuda-toolkit for CUDA targets
       - name: Set up CUDA
         if: ${{ matrix.cuda == true }}
-        uses: Jimver/cuda-toolkit@v0.2.11
+        uses: Jimver/cuda-toolkit@v0.2.21
         with:
           cuda: ${{ matrix.cuda-version }}
 
