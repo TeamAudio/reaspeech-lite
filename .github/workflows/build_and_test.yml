@@ -48,7 +48,6 @@ jobs:
             pluginval-binary: ./pluginval.exe
           - name: WindowsCUDA
             os: windows-latest
-            pluginval-binary: ./pluginval.exe
             cuda: true
             cuda-version: '12.8.0'
             extra-flags: -DGGML_CUDA=1
