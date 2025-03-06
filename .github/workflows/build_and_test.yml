@@ -46,6 +46,12 @@ jobs:
           - name: Windows
             os: windows-latest
             pluginval-binary: ./pluginval.exe
+          - name: WindowsCUDA
+            os: windows-latest
+            pluginval-binary: ./pluginval.exe
+            cuda: true
+            cuda-version: '12.2.0'
+            extra-flags: -DGGML_CUDA=1
 
     steps:
       # Setup MSVC toolchain and developer command prompt (Windows)
@@ -55,6 +61,13 @@ jobs:
       - name: Set up Clang
         if: runner.os == 'Linux'
         uses: egor-tensin/setup-clang@v1
+
+      # Set up cuda-toolkit for CUDA targets
+      - name: Set up CUDA
+        if: ${{ matrix.cuda == true }}
+        uses: Jimver/cuda-toolkit@v0.2.11
+        with:
+          cuda: ${{ matrix.cuda-version }}
 
       # This also starts up our "fake" display (Xvfb), needed for pluginval
       - name: Install JUCE Linux Deps
