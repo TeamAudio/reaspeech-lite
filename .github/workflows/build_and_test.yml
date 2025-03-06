@@ -212,13 +212,13 @@ jobs:
         run: 7z a -tzip "${{ env.ARTIFACT_NAME }}.zip" "-xr!lib${{ env.PRODUCT_NAME }}_SharedCode.a" .
 
       - name: Generate Installer
-        if: ${{ matrix.name == 'Windows' }}
+        if: ${{ matrix.name == 'Windows' || matrix.name == 'WindowsCUDA' }}
         run: |
           iscc "packaging\installer.iss"
           mv "packaging/Output/${{ env.ARTIFACT_NAME }}.exe" "${{ env.ARTIFACTS_PATH }}/"
 
       # - name: Codesign with Azure Trusted Signing
-      #   if: ${{ matrix.name == 'Windows' }}
+      #   if: ${{ matrix.name == 'Windows' || matrix.name == 'WindowsCUDA' }}
       #   uses: azure/trusted-signing-action@v0.5.0
       #   with:
       #     # The Azure Active Directory tenant (directory) ID.
