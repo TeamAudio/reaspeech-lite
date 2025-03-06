@@ -32,7 +32,7 @@ set(PRODUCT_NAME "ReaSpeechLite")
 set(COMPANY_NAME "TechAudio")
 
 # Change me! Used for the MacOS bundle identifier (and signing)
-set(BUNDLE_ID "io.techaud.reaspeech-lite")
+set(BUNDLE_ID "com.TechAudio.ReaSpeechLite")
 
 # Change me! Set the plugin formats you want built
 # Valid choices: AAX Unity VST VST3 AU AUv3 Standalone
