@@ -39,6 +39,11 @@ jobs:
             os: ubuntu-22.04
             pluginval-binary: ./pluginval
             extra-flags: -G Ninja
+          - name: LinuxCUDA
+            os: ubuntu-22.04
+            cuda: true
+            cuda-version: '12.8.0'
+            extra-flags: -G Ninja -DGGML_CUDA=1
           - name: macOS
             os: macos-14
             pluginval-binary: pluginval.app/Contents/MacOS/pluginval
@@ -155,7 +160,7 @@ jobs:
           echo "ARTIFACT_NAME=${{ env.PRODUCT_NAME }}-${{ env.VERSION }}-${{ matrix.name }}" >> $GITHUB_ENV
 
       - name: Pluginval
-        if: ${{ matrix.name != 'WindowsCUDA' }}
+        if: ${{ matrix.name != 'WindowsCUDA' && matrix.name != 'LinuxCUDA' }}
         run: |
           curl -LO "https://github.com/Tracktion/pluginval/releases/download/v1.0.3/pluginval_${{ matrix.name }}.zip"
           7z x pluginval_${{ matrix.name }}.zip
@@ -247,7 +252,7 @@ jobs:
           path: "${{ env.ARTIFACTS_PATH }}/${{ env.ARTIFACT_NAME }}.exe"
 
       - name: Upload Zip (Linux)
-        if: ${{ matrix.name == 'Linux' }}
+        if: ${{ matrix.name == 'Linux' || matrix.name == 'LinuxCUDA' }}
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.ARTIFACT_NAME }}.zip
