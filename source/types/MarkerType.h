@@ -8,26 +8,29 @@ struct MarkerType
     enum Enum
     {
         markers,
-        regions
+        regions,
+        notes,
+        count // Used for array size
+    };
+
+    static constexpr std::array<std::string_view, count> strings = {
+        "markers",
+        "regions",
+        "notes"
     };
 
     static std::optional<Enum> fromString (const std::string& str)
     {
-        if (str == "markers")
-            return markers;
-        else if (str == "regions")
-            return regions;
-        else
-            return std::nullopt;
+        for (size_t i = 0; i < strings.size(); ++i)
+            if (str == strings[i])
+                return static_cast<Enum> (i);
+        return std::nullopt;
     }
 
     static std::string toString (Enum type)
     {
-        switch (type)
-        {
-            case markers: return "markers";
-            case regions: return "regions";
-        }
+        if (type >= 0 && type < count)
+            return std::string (strings[type]);
         return "";
     }
 };

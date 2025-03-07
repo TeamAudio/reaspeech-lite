@@ -65,7 +65,7 @@ public:
 
     void createMarkers (const juce::var& args, std::function<void (const juce::var&)> complete)
     {
-        if (! args.isArray() || args.size() < 2)
+        if (! args.isArray() || args.size() < 2 || ! args[0].isArray() || ! args[1].isString())
         {
             complete (makeError ("Invalid arguments"));
             return;
@@ -88,14 +88,16 @@ public:
         }
 
         withReaperUndo ("Create " + MarkerType::toString (markerType) + " from transcript", [&] {
-            for (auto i = 0; i < (*markers).size(); ++i)
+            try
             {
-                const auto marker = (*markers)[i].getDynamicObject();
-                const auto regions = markerType == MarkerType::regions;
-                const auto start = marker->getProperty ("start");
-                const auto end = marker->getProperty ("end");
-                const auto name = marker->getProperty ("name");
-                rpr.AddProjectMarker2 (ReaperProxy::activeProject, regions, start, end, name.toString().toRawUTF8(), i + 1, 0);
+                if (markerType == MarkerType::notes)
+                    addReaperNotesTrack (markers);
+                else
+                    addReaperMarkers (markers, markerType);
+            }
+            catch (const ReaperProxy::Missing& e)
+            {
+                DBG ("Missing REAPER API function: " + juce::String (e.what()));
             }
         });
 
@@ -348,6 +350,70 @@ private:
         juce::DynamicObject::Ptr error = new juce::DynamicObject();
         error->setProperty ("error", message);
         return juce::var (error.get());
+    }
+
+    void addReaperMarkers (const juce::Array<juce::var>* markers, const MarkerType::Enum markerType)
+    {
+        int markerNum = 1;
+        for (const auto& markerVar : *markers)
+        {
+            const auto marker = markerVar.getDynamicObject();
+            const auto regions = markerType == MarkerType::regions;
+            const auto start = marker->getProperty ("start");
+            const auto end = marker->getProperty ("end");
+            const auto name = marker->getProperty ("name");
+
+            rpr.AddProjectMarker2 (ReaperProxy::activeProject, regions, start, end, name.toString().toRawUTF8(), markerNum, 0);
+            markerNum++;
+        }
+    }
+
+    void addReaperNotesTrack (const juce::Array<juce::var>* markers, const char* trackName = "Transcript")
+    {
+        const auto index = 0;
+        const auto originalPosition = rpr.GetCursorPositionEx (ReaperProxy::activeProject);
+
+        rpr.InsertTrackInProject (ReaperProxy::activeProject, index, 0);
+        const auto track = rpr.GetTrack (ReaperProxy::activeProject, index);
+        rpr.SetOnlyTrackSelected (track);
+        rpr.GetSetMediaTrackInfo_String (track, "P_NAME", const_cast<char*> (trackName), true);
+
+        for (const auto& markerVar : *markers)
+        {
+            const auto marker = markerVar.getDynamicObject();
+            const auto start = marker->getProperty ("start");
+            const auto end = marker->getProperty ("end");
+            const auto name = marker->getProperty ("name");
+
+            const auto item = createEmptyReaperItem (start, end);
+            setReaperNoteText (item, name.toString());
+        }
+
+        rpr.SetEditCurPos2 (ReaperProxy::activeProject, originalPosition, true, true);
+    }
+
+    ReaperProxy::MediaItem* createEmptyReaperItem (const double start, const double end)
+    {
+        rpr.Main_OnCommandEx(40142, 0, ReaperProxy::activeProject); // Insert empty item
+        auto* item = rpr.GetSelectedMediaItem(ReaperProxy::activeProject, 0);
+        rpr.SelectAllMediaItems (ReaperProxy::activeProject, false);
+        rpr.SetMediaItemPosition (item, start, true);
+        rpr.SetMediaItemLength (item, end - start, true);
+        return item;
+    }
+
+    void setReaperNoteText (ReaperProxy::MediaItem* item, const juce::String& text, bool stretch = false)
+    {
+        char buffer[4096];
+        rpr.GetItemStateChunk (item, buffer, sizeof (buffer), false);
+        const auto chunk = juce::String (buffer);
+
+        juce::String notesChunk;
+        notesChunk << "<NOTES\n|" << text.trim() << "\n>\n";
+        const juce::String flagsChunk { stretch ? "IMGRESOURCEFLAGS 11\n" : "" };
+
+        const auto newChunk = chunk.replace(">", notesChunk.replace ("%", "%%") + flagsChunk + ">");
+        rpr.SetItemStateChunk (item, newChunk.toRawUTF8(), false);
     }
 
     void withReaperUndo (const juce::String& label, std::function<void()> action)

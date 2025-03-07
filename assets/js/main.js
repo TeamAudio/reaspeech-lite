@@ -31,6 +31,7 @@ class App {
     document.getElementById('process-button').onclick = () => { this.handleProcess(); };
     document.getElementById('create-markers').onclick = () => { this.handleCreateMarkers('markers'); };
     document.getElementById('create-regions').onclick = () => { this.handleCreateMarkers('regions'); };
+    document.getElementById('create-notes').onclick = () => { this.handleCreateMarkers('notes'); };
 
     setInterval(() => {
       this.update();
