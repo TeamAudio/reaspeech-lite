@@ -46,6 +46,11 @@ jobs:
           - name: Windows
             os: windows-latest
             pluginval-binary: ./pluginval.exe
+          - name: WindowsCUDA
+            os: windows-latest
+            cuda: true
+            cuda-version: '12.8.0'
+            extra-flags: -DGGML_CUDA=1
 
     steps:
       # Setup MSVC toolchain and developer command prompt (Windows)
@@ -55,6 +60,13 @@ jobs:
       - name: Set up Clang
         if: runner.os == 'Linux'
         uses: egor-tensin/setup-clang@v1
+
+      # Set up cuda-toolkit for CUDA targets
+      - name: Set up CUDA
+        if: ${{ matrix.cuda == true }}
+        uses: Jimver/cuda-toolkit@v0.2.21
+        with:
+          cuda: ${{ matrix.cuda-version }}
 
       # This also starts up our "fake" display (Xvfb), needed for pluginval
       - name: Install JUCE Linux Deps
@@ -139,13 +151,11 @@ jobs:
           ARTIFACTS_PATH=${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}
           echo "ARTIFACTS_PATH=$ARTIFACTS_PATH" >> $GITHUB_ENV
           echo "VST3_PATH=$ARTIFACTS_PATH/VST3/${{ env.PRODUCT_NAME }}.vst3" >> $GITHUB_ENV
-          echo "AU_PATH=$ARTIFACTS_PATH/AU/${{ env.PRODUCT_NAME }}.component" >> $GITHUB_ENV
-          echo "AUV3_PATH=$ARTIFACTS_PATH/AUv3/${{ env.PRODUCT_NAME }}.appex" >> $GITHUB_ENV
-          echo "CLAP_PATH=$ARTIFACTS_PATH/CLAP/${{ env.PRODUCT_NAME }}.clap" >> $GITHUB_ENV
-          echo "STANDALONE_PATH=$ARTIFACTS_PATH/Standalone/${{ env.PRODUCT_NAME }}.app" >> $GITHUB_ENV
+          echo "MATRIX_NAME=${{ matrix.name }}" >> $GITHUB_ENV
           echo "ARTIFACT_NAME=${{ env.PRODUCT_NAME }}-${{ env.VERSION }}-${{ matrix.name }}" >> $GITHUB_ENV
 
       - name: Pluginval
+        if: ${{ matrix.name != 'WindowsCUDA' }}
         run: |
           curl -LO "https://github.com/Tracktion/pluginval/releases/download/v1.0.3/pluginval_${{ matrix.name }}.zip"
           7z x pluginval_${{ matrix.name }}.zip
@@ -187,7 +197,7 @@ jobs:
 
           # cd packaging
           # envsubst < distribution.xml.template > distribution.xml
-          # productbuild --resources ./resources --distribution distribution.xml --sign "${{ secrets.DEVELOPER_ID_INSTALLER }}" --timestamp "${{ env.ARTIFACT_NAME }}.pkg" 
+          # productbuild --resources ./resources --distribution distribution.xml --sign "${{ secrets.DEVELOPER_ID_INSTALLER }}" --timestamp "${{ env.ARTIFACT_NAME }}.pkg"
 
           # xcrun notarytool submit "${{ env.ARTIFACT_NAME }}.pkg" --apple-id ${{ secrets.NOTARIZATION_USERNAME }} --password ${{ secrets.NOTARIZATION_PASSWORD }} --team-id ${{ secrets.TEAM_ID }} --wait
           # xcrun stapler staple "${{ env.ARTIFACT_NAME }}.pkg"
@@ -198,13 +208,13 @@ jobs:
         run: 7z a -tzip "${{ env.ARTIFACT_NAME }}.zip" "-xr!lib${{ env.PRODUCT_NAME }}_SharedCode.a" .
 
       - name: Generate Installer
-        if: ${{ matrix.name == 'Windows' }}
+        if: ${{ matrix.name == 'Windows' || matrix.name == 'WindowsCUDA' }}
         run: |
           iscc "packaging\installer.iss"
           mv "packaging/Output/${{ env.ARTIFACT_NAME }}.exe" "${{ env.ARTIFACTS_PATH }}/"
 
       # - name: Codesign with Azure Trusted Signing
-      #   if: ${{ matrix.name == 'Windows' }}
+      #   if: ${{ matrix.name == 'Windows' || matrix.name == 'WindowsCUDA' }}
       #   uses: azure/trusted-signing-action@v0.5.0
       #   with:
       #     # The Azure Active Directory tenant (directory) ID.
@@ -230,7 +240,7 @@ jobs:
       #     files-folder-filter: exe
 
       - name: Upload Exe (Windows)
-        if: ${{ matrix.name == 'Windows' }}
+        if: ${{ matrix.name == 'Windows' || matrix.name == 'WindowsCUDA' }}
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.ARTIFACT_NAME }}.exe

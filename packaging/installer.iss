@@ -1,4 +1,5 @@
 #define Version Trim(FileRead(FileOpen("..\VERSION")))
+#define MatrixName GetEnv('MATRIX_NAME')
 #define ProjectName GetEnv('PROJECT_NAME')
 #define ProductName GetEnv('PRODUCT_NAME')
 #define Publisher GetEnv('COMPANY_NAME')
@@ -17,7 +18,7 @@ Name: "vst3"; Description: "VST3 plugin"; Types: full custom
 ArchitecturesInstallIn64BitMode=x64compatible
 ArchitecturesAllowed=x64compatible
 AppName={#ProductName}
-OutputBaseFilename={#ProductName}-{#Version}-Windows
+OutputBaseFilename={#ProductName}-{#Version}-{#MatrixName}
 AppCopyright=Copyright (C) {#Year} {#Publisher}
 AppPublisher={#Publisher}
 AppVersion={#Version}
