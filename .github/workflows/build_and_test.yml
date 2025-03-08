@@ -214,7 +214,7 @@ jobs:
           # xcrun stapler staple "${{ env.ARTIFACT_NAME }}.pkg"
 
       - name: Zip
-        if: ${{ matrix.name == 'Linux' }}
+        if: ${{ matrix.name == 'Linux' || matrix.name == 'LinuxCUDA' }}
         working-directory: ${{ env.ARTIFACTS_PATH }}
         run: 7z a -tzip "${{ env.ARTIFACT_NAME }}.zip" "-xr!lib${{ env.PRODUCT_NAME }}_SharedCode.a" .
 
