@@ -58,6 +58,10 @@ jobs:
             extra-flags: -DGGML_CUDA=1
 
     steps:
+      - name: Maximize build space
+        if: runner.os == 'Linux'
+        uses: easimon/maximize-build-space@v10
+
       # Setup MSVC toolchain and developer command prompt (Windows)
       - uses: ilammy/msvc-dev-cmd@v1
 
