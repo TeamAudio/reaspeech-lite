@@ -408,6 +408,11 @@ private:
         rpr.GetItemStateChunk (item, buffer, sizeof (buffer), false);
         const auto chunk = juce::String (buffer);
 
+        // This function is currently only used with new items, and the chunk size
+        // in that case is currently around 200 bytes. If this changes, the buffer
+        // size may need to be increased. The current size is a bit arbitrary.
+        jassert (static_cast<size_t> (chunk.length()) < sizeof (buffer));
+
         juce::String notesChunk;
         notesChunk << "<NOTES\n|" << text.trim() << "\n>\n";
         const juce::String flagsChunk { stretch ? "IMGRESOURCEFLAGS 11\n" : "" };
