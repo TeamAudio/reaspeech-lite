@@ -196,48 +196,70 @@ class App {
     });
 
     this.getRegionSequences().then((regionSequences) => {
+      // First, collect all playback regions by audio source ID
+      const playbackRegionsByAudioSource = {};
+
       for (let i = 0; i < regionSequences.length; i++) {
         const rs = regionSequences[i];
 
         for (let j = 0; j < rs.playbackRegions.length; j++) {
           const pr = rs.playbackRegions[j];
+          const audioSourceID = pr.audioSourcePersistentID;
+
+          if (!playbackRegionsByAudioSource[audioSourceID]) {
+            playbackRegionsByAudioSource[audioSourceID] = [];
+          }
+          playbackRegionsByAudioSource[audioSourceID].push(pr);
+        }
+      }
+
+      // Now process each segment
+      const segments = document.querySelectorAll('.segment');
+      segments.forEach((segment) => {
+        const source = segment.querySelector('.segment-source');
+        const sourceID = source.dataset.persistentId;
+        const playbackRegions = playbackRegionsByAudioSource[sourceID] || [];
+
+        const startElement = segment.querySelector('.segment-start');
+        const endElement = segment.querySelector('.segment-end');
+        const textElement = segment.querySelector('.segment-text');
+
+        // Default: no playable region found
+        let isPlayable = false;
+
+        // Try to find a playback region where this segment is playable
+        for (const pr of playbackRegions) {
+          const segmentStart = parseFloat(startElement.dataset.segmentTime);
+          const segmentEnd = parseFloat(endElement.dataset.segmentTime);
 
           const playbackStart = pr.playbackStart;
           const playbackEnd = pr.playbackEnd;
           const modificationStart = pr.modificationStart;
-          const audioSourcePersistentID = pr.audioSourcePersistentID;
 
-          const segments = document.querySelectorAll('.segment');
-          segments.forEach((segment) => {
-            const source = segment.querySelector('.segment-source');
+          let start = playbackStart + segmentStart - modificationStart;
+          let end = playbackStart + segmentEnd - modificationStart;
 
-            if (source.dataset.persistentId === audioSourcePersistentID) {
-              const startElement = segment.querySelector('.segment-start');
-              const endElement = segment.querySelector('.segment-end');
-              const textElement = segment.querySelector('.segment-text');
-              const segmentStart = parseFloat(startElement.dataset.segmentTime);
-              const segmentEnd = parseFloat(endElement.dataset.segmentTime);
-
-              let start = playbackStart + segmentStart - modificationStart;
-              let end = playbackStart + segmentEnd - modificationStart;
-
-              if (start < playbackStart || start > playbackEnd) {
-                startElement.dataset.playbackStart = '';
-                startElement.dataset.playbackEnd = '';
-                textElement.dataset.playbackStart = '';
-                startElement.innerText = '';
-                endElement.innerText = '';
-              } else {
-                startElement.dataset.playbackStart = start;
-                endElement.dataset.playbackEnd = end;
-                textElement.dataset.playbackStart = start;
-                startElement.innerText = this.timestampToString(start);
-                endElement.innerText = this.timestampToString(end);
-              }
-            }
-          });
+          if (start >= playbackStart && start <= playbackEnd) {
+            // Found a playable region
+            isPlayable = true;
+            startElement.dataset.playbackStart = start;
+            endElement.dataset.playbackEnd = end;
+            textElement.dataset.playbackStart = start;
+            startElement.innerText = this.timestampToString(start);
+            endElement.innerText = this.timestampToString(end);
+            break; // We found a playable region, no need to check others
+          }
         }
-      }
+
+        // If no playable region found, clear the data
+        if (!isPlayable) {
+          startElement.dataset.playbackStart = '';
+          endElement.dataset.playbackEnd = '';
+          textElement.dataset.playbackStart = '';
+          startElement.innerText = '';
+          endElement.innerText = '';
+        }
+      });
     });
   }
 
