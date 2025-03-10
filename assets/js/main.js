@@ -410,8 +410,10 @@ class App {
   }
 
   playSegment(segment) {
-    const playbackStart = parseFloat(segment.dataset.playbackStart);
-    this.playAt(playbackStart);
+    if (segment.dataset.playbackStart) {
+      const playbackStart = parseFloat(segment.dataset.playbackStart);
+      this.playAt(playbackStart);
+    }
   }
 
   playAt(seconds) {
