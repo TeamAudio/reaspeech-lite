@@ -266,8 +266,8 @@ class App {
       const playbackEnd = pr.playbackEnd;
       const modificationStart = pr.modificationStart;
 
-      let start = playbackStart + segmentStart - modificationStart;
-      let end = playbackStart + segmentEnd - modificationStart;
+      const start = playbackStart + segmentStart - modificationStart;
+      const end = playbackStart + segmentEnd - modificationStart;
 
       if (start >= playbackStart && start <= playbackEnd) {
         return { start, end };
