@@ -190,56 +190,92 @@ class App {
   }
 
   update() {
+    this.updateTranscriptionStatus();
+    this.updatePlaybackRegions();
+  }
+
+  updateTranscriptionStatus() {
     this.getTranscriptionStatus().then((status) => {
       if (status !== '') {
         this.setProcessText(status + '...');
       }
     });
+  }
 
+  updatePlaybackRegions() {
     this.getRegionSequences().then((regionSequences) => {
-      for (let i = 0; i < regionSequences.length; i++) {
-        const rs = regionSequences[i];
-
-        for (let j = 0; j < rs.playbackRegions.length; j++) {
-          const pr = rs.playbackRegions[j];
-
-          const playbackStart = pr.playbackStart;
-          const playbackEnd = pr.playbackEnd;
-          const modificationStart = pr.modificationStart;
-          const audioSourcePersistentID = pr.audioSourcePersistentID;
-
-          const segments = document.querySelectorAll('.segment');
-          segments.forEach((segment) => {
-            const source = segment.querySelector('.segment-source');
-
-            if (source.dataset.persistentId === audioSourcePersistentID) {
-              const startElement = segment.querySelector('.segment-start');
-              const endElement = segment.querySelector('.segment-end');
-              const textElement = segment.querySelector('.segment-text');
-              const segmentStart = parseFloat(startElement.dataset.segmentTime);
-              const segmentEnd = parseFloat(endElement.dataset.segmentTime);
-
-              let start = playbackStart + segmentStart - modificationStart;
-              let end = playbackStart + segmentEnd - modificationStart;
-
-              if (start < playbackStart || start > playbackEnd) {
-                startElement.dataset.playbackStart = '';
-                startElement.dataset.playbackEnd = '';
-                textElement.dataset.playbackStart = '';
-                startElement.innerText = '';
-                endElement.innerText = '';
-              } else {
-                startElement.dataset.playbackStart = start;
-                endElement.dataset.playbackEnd = end;
-                textElement.dataset.playbackStart = start;
-                startElement.innerText = this.timestampToString(start);
-                endElement.innerText = this.timestampToString(end);
-              }
-            }
-          });
-        }
-      }
+      this.updatePlaybackForRegionSequences(regionSequences);
     });
+  }
+
+  updatePlaybackForRegionSequences(regionSequences) {
+    const playbackRegionsByAudioSource =
+      this.collectPlaybackRegionsByAudioSource(regionSequences);
+
+    for (const segment of document.querySelectorAll('.segment')) {
+      const source = segment.querySelector('.segment-source');
+      const sourceID = source.dataset.persistentId;
+      const playbackRegions = playbackRegionsByAudioSource[sourceID] || [];
+
+      this.updatePlaybackForSegment(segment, playbackRegions);
+    }
+  }
+
+  updatePlaybackForSegment(segment, playbackRegions) {
+    const startElement = segment.querySelector('.segment-start');
+    const endElement = segment.querySelector('.segment-end');
+    const textElement = segment.querySelector('.segment-text');
+
+    const segmentStart = parseFloat(startElement.dataset.segmentTime);
+    const segmentEnd = parseFloat(endElement.dataset.segmentTime);
+
+    const playbackRange =
+      this.findPlayableRegion(playbackRegions, segmentStart, segmentEnd);
+
+    if (playbackRange) {
+      startElement.dataset.playbackStart = playbackRange.start;
+      endElement.dataset.playbackEnd = playbackRange.end;
+      textElement.dataset.playbackStart = playbackRange.start;
+      startElement.innerText = this.timestampToString(playbackRange.start);
+      endElement.innerText = this.timestampToString(playbackRange.end);
+    } else {
+      startElement.dataset.playbackStart = '';
+      endElement.dataset.playbackEnd = '';
+      textElement.dataset.playbackStart = '';
+      startElement.innerText = '';
+      endElement.innerText = '';
+    }
+  }
+
+  collectPlaybackRegionsByAudioSource(regionSequences) {
+    const result = {};
+    for (const rs of regionSequences) {
+      for (const pr of rs.playbackRegions) {
+        const sourceID = pr.audioSourcePersistentID;
+        if (!result[sourceID]) {
+          result[sourceID] = [];
+        }
+        result[sourceID].push(pr);
+      }
+    }
+    return result;
+  }
+
+  findPlayableRegion(playbackRegions, segmentStart, segmentEnd) {
+    for (const pr of playbackRegions) {
+      const playbackStart = pr.playbackStart;
+      const playbackEnd = pr.playbackEnd;
+      const modificationStart = pr.modificationStart;
+
+      const start = playbackStart + segmentStart - modificationStart;
+      const end = playbackStart + segmentEnd - modificationStart;
+
+      if (start >= playbackStart && start <= playbackEnd) {
+        return { start, end };
+      }
+    }
+
+    return null;
   }
 
   enableProcessButton() {
@@ -375,8 +411,10 @@ class App {
   }
 
   playSegment(segment) {
-    const playbackStart = parseFloat(segment.dataset.playbackStart);
-    this.playAt(playbackStart);
+    if (segment.dataset.playbackStart) {
+      const playbackStart = parseFloat(segment.dataset.playbackStart);
+      this.playAt(playbackStart);
+    }
   }
 
   playAt(seconds) {
