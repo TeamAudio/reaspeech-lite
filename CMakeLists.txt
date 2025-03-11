@@ -119,36 +119,9 @@ juce_add_plugin("${PROJECT_NAME}"
     IS_ARA_EFFECT TRUE
     NEEDS_CURL TRUE
     NEEDS_WEBVIEW2 TRUE
+    NEEDS_WEB_BROWSER TRUE
     VST3_AUTO_MANIFEST FALSE
 )
-
-if(UNIX AND NOT APPLE)
-    find_package(PkgConfig REQUIRED)
-    pkg_check_modules(GTK3 REQUIRED gtk+-3.0)
-    pkg_check_modules(WEBKIT webkit2gtk-4.1)
-    if(NOT WEBKIT_FOUND)
-        pkg_check_modules(WEBKIT REQUIRED webkit2gtk-4.0)
-    endif()
-
-    include_directories(
-        ${GTK3_INCLUDE_DIRS}
-        ${WEBKIT_INCLUDE_DIRS}
-    )
-    link_directories(
-        ${GTK3_LIBRARY_DIRS}
-        ${WEBKIT_LIBRARY_DIRS}
-    )
-
-    add_compile_definitions(
-        JUCE_USE_WEBKIT=1
-    )
-
-    juce_link_with_embedded_linux_subprocess(${PROJECT_NAME})
-else()
-    add_compile_definitions(
-        JUCE_USE_WIN_WEBVIEW2_WITH_STATIC_LINKING=1
-    )
-endif()
 
 # This lets us use our code in both the JUCE targets and our Test target
 # Without running into ODR violations
@@ -182,6 +155,7 @@ target_compile_definitions(SharedCode
     # JUCE_WEB_BROWSER and JUCE_USE_CURL off by default
     JUCE_WEB_BROWSER=1  # If you set this to 1, add `NEEDS_WEB_BROWSER TRUE` to the `juce_add_plugin` call
     JUCE_USE_CURL=1     # If you set this to 1, add `NEEDS_CURL TRUE` to the `juce_add_plugin` call
+    JUCE_USE_WIN_WEBVIEW2_WITH_STATIC_LINKING=1
     JUCE_VST3_CAN_REPLACE_VST2=0
 
     # Uncomment if you are paying for a an Indie/Pro license or releasing under GPLv3
