@@ -1,17 +1,11 @@
+/** @type {import('ts-jest').JestConfigWithTsJest} **/
 export default {
-  preset: 'ts-jest',
-  testEnvironment: 'jsdom',
+  testEnvironment: "jsdom",
   setupFilesAfterEnv: ['<rootDir>/setupTests.ts'],
   collectCoverage: true,
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'lcov'],
   transform: {
-    '^.+\\.[tj]sx?$': ['ts-jest', {
-      useESM: true,
-    }],
+    "^.+\.tsx?$": ["ts-jest",{}],
   },
-  extensionsToTreatAsEsm: ['.ts', '.tsx'],
-  moduleNameMapper: {
-    '^(\\.{1,2}/.*)\\.js$': '$1',
-  }
 };
