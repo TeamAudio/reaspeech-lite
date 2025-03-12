@@ -5,7 +5,7 @@ declare global {
   interface Window {
     __JUCE__: {
       initialisationData: {
-        webState: string;
+        webState?: string[];
       }
     }
     App: typeof App;
@@ -29,10 +29,10 @@ class Native {
 
 export default class App {
   private native: Native;
-  private state: any;
+  public state: any;
 
-  constructor(native?: Native) {
-    this.native = native || new Native();
+  constructor() {
+    this.native = new Native();
 
     this.state = {
       modelName: 'small',
@@ -60,11 +60,12 @@ export default class App {
   }
 
   loadState() {
-    if (!window.__JUCE__.initialisationData.webState) {
+    if (!window.__JUCE__.initialisationData.webState
+      || !window.__JUCE__.initialisationData.webState[0]) {
       return Promise.resolve();
     }
     try {
-      this.state = JSON.parse(window.__JUCE__.initialisationData.webState);
+      this.state = JSON.parse(window.__JUCE__.initialisationData.webState[0]);
     } catch (e) {
       console.warn('Failed to parse web state:', e);
     }

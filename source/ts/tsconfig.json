@@ -1,9 +1,12 @@
 {
   "compilerOptions": {
-    "target": "es2022",
-    "module": "es2022",
+    "target": "es2019",
+    "module": "es2020",
+    "moduleResolution": "node",
     "outDir": "../../assets/js",
-    "noImplicitAny": false
+    "allowJs": true,
+    "esModuleInterop": true,
+    "noImplicitAny": false,
   },
   "include": ["main.ts"]
 }

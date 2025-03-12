@@ -1,4 +1,5 @@
-const esbuild = require('esbuild');
+import * as esbuild from 'esbuild';
+
 const args = process.argv.slice(2);
 const watch = args.includes('--watch');
 
@@ -8,7 +9,7 @@ const buildOptions = {
   bundle: true,
   outfile: '../../assets/js/main.js',
   format: 'iife',
-  target: 'es2022',
+  target: 'es2019',
   minify: true,
 };
 
