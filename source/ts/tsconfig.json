@@ -7,7 +7,7 @@
     "allowJs": true,
     "esModuleInterop": true,
     "noImplicitAny": false,
-    "typeRoots": ["./types", "./node_modules/@types"]
+    "typeRoots": ["./src/types", "./node_modules/@types"]
   },
-  "include": ["main.ts", "./types/**/*.d.ts"]
+  "include": ["./src/**/*.ts", "./src/types/**/*.d.ts"]
 }

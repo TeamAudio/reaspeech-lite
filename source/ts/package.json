@@ -4,9 +4,9 @@
   "description": "",
   "type": "module",
   "scripts": {
-    "build": "node build.js",
-    "watch": "node build.js --watch",
-    "test": "jest --config=jest.config.js"
+    "build": "node config/build.js",
+    "watch": "node config/build.js --watch",
+    "test": "jest --config=config/jest.config.js"
   },
   "dependencies": {
     "juce-framework-frontend": "file:../../JUCE/modules/juce_gui_extra/native/javascript"
