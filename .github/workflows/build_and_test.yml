@@ -129,6 +129,25 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: 'source/ts/package-lock.json'
+
+      - name: Install TypeScript dependencies
+        working-directory: source/ts
+        run: npm ci
+
+      - name: Run TypeScript tests
+        working-directory: source/ts
+        run: npm run test
+
+      - name: Build TypeScript assets
+        working-directory: source/ts
+        run: npm run build
+
       - name: Cache the build
         uses: mozilla-actions/sccache-action@v0.0.7
 
