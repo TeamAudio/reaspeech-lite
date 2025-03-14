@@ -1,9 +1,10 @@
 /** @type {import('ts-jest').JestConfigWithTsJest} **/
 export default {
   testEnvironment: 'jsdom',
-  setupFilesAfterEnv: ['<rootDir>/setupTests.ts'],
+  rootDir: '../',
+  setupFilesAfterEnv: ['<rootDir>/tests/setupTests.ts'],
   collectCoverage: true,
-  coverageDirectory: 'coverage',
+  coverageDirectory: '<rootDir>/tests/coverage',
   coverageReporters: ['text', 'lcov'],
   transform: {
     "^.+\.tsx?$": ["ts-jest",{}],
