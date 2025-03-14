@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "target": "es2019",
+    "module": "es2020",
+    "moduleResolution": "node",
+    "outDir": "../../assets/js",
+    "allowJs": true,
+    "esModuleInterop": true,
+    "noImplicitAny": false,
+    "typeRoots": ["./types", "./node_modules/@types"]
+  },
+  "include": ["main.ts", "./types/**/*.d.ts"]
+}
