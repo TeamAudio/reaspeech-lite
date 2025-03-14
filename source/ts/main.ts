@@ -1,4 +1,3 @@
-// @ts-ignore
 import * as Juce from "juce-framework-frontend";
 
 declare global {
@@ -13,18 +12,18 @@ declare global {
 }
 
 class Native {
-  canCreateMarkers: Function = Juce.getNativeFunction("canCreateMarkers");
-  createMarkers: Function = Juce.getNativeFunction("createMarkers");
-  getAudioSources: Function = Juce.getNativeFunction("getAudioSources");
-  getModels: Function = Juce.getNativeFunction("getModels");
-  getRegionSequences: Function = Juce.getNativeFunction("getRegionSequences");
-  getTranscriptionStatus: Function = Juce.getNativeFunction("getTranscriptionStatus");
-  getWhisperLanguages: Function = Juce.getNativeFunction("getWhisperLanguages");
-  play: Function = Juce.getNativeFunction("play");
-  stop: Function = Juce.getNativeFunction("stop");
-  setPlaybackPosition: Function = Juce.getNativeFunction("setPlaybackPosition");
-  setWebState: Function = Juce.getNativeFunction("setWebState");
-  transcribeAudioSource: Function = Juce.getNativeFunction("transcribeAudioSource");
+  canCreateMarkers = Juce.getNativeFunction("canCreateMarkers");
+  createMarkers = Juce.getNativeFunction("createMarkers");
+  getAudioSources = Juce.getNativeFunction("getAudioSources");
+  getModels = Juce.getNativeFunction("getModels");
+  getRegionSequences = Juce.getNativeFunction("getRegionSequences");
+  getTranscriptionStatus = Juce.getNativeFunction("getTranscriptionStatus");
+  getWhisperLanguages = Juce.getNativeFunction("getWhisperLanguages");
+  play = Juce.getNativeFunction("play");
+  stop = Juce.getNativeFunction("stop");
+  setPlaybackPosition = Juce.getNativeFunction("setPlaybackPosition");
+  setWebState = Juce.getNativeFunction("setWebState");
+  transcribeAudioSource = Juce.getNativeFunction("transcribeAudioSource");
 }
 
 export default class App {
