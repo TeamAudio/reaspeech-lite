@@ -21,7 +21,8 @@ struct Resources
             { "img/tech-audio-logo.png", { BinaryData::techaudiologo_png, BinaryData::techaudiologo_pngSize, "image/png" } },
             { "js/bootstrap.bundle.min.js", { BinaryData::bootstrap_bundle_min_js, BinaryData::bootstrap_bundle_min_jsSize, "application/javascript" } },
             { "js/bootstrap.bundle.min.js.map", { BinaryData::bootstrap_bundle_min_js_map, BinaryData::bootstrap_bundle_min_js_mapSize, "application/json" } },
-            { "js/main.js", { BinaryData::main_js, BinaryData::main_jsSize, "application/javascript" } }
+            { "js/main.js", { BinaryData::main_js, BinaryData::main_jsSize, "application/javascript" } },
+            { "js/main.js.map", { BinaryData::main_js, BinaryData::main_jsSize, "application/json" } }
         };
 
         const auto urlToRetrieve = url == "/" ? juce::String { "index.html" }
