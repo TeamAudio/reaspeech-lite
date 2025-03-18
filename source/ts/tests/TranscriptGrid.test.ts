@@ -1,7 +1,6 @@
 import TranscriptGrid from '../src/TranscriptGrid';
-import { PlaybackRegion } from '../src/ARA';
+import { AudioSource, PlaybackRegion } from '../src/ARA';
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
-import { htmlEscape, timestampToString } from '../src/Utils';
 
 // Mock ag-grid modules
 jest.mock('ag-grid-community', () => {
@@ -16,6 +15,18 @@ jest.mock('ag-grid-community', () => {
     })),
   };
 });
+
+function makeAudioSource(name: string, persistentID: string): AudioSource {
+  return {
+    name: name,
+    persistentID: persistentID,
+    sampleRate: 44100,
+    sampleCount: 441000,
+    duration: 10,
+    channelCount: 2,
+    merits64BitSamples: false
+  };
+}
 
 describe('TranscriptGrid', () => {
   let grid: TranscriptGrid;
@@ -39,7 +50,7 @@ describe('TranscriptGrid', () => {
       { start: 10, end: 15, text: 'Hello', score: 0.95 },
       { start: 16, end: 20, text: 'World', score: 0.85 }
     ];
-    const audioSource = { name: 'Test Audio', persistentID: 'test123' };
+    const audioSource = makeAudioSource('Test Audio', 'test123');
 
     grid.addSegments(segments, audioSource);
 
@@ -76,7 +87,7 @@ describe('TranscriptGrid', () => {
       { start: 10, end: 15, text: 'Hello', score: 0.95 },
       { start: 16, end: 20, text: 'World', score: 0.85 }
     ];
-    const audioSource = { name: 'Test Audio', persistentID: 'test123' };
+    const audioSource = makeAudioSource('Test Audio', 'test123');
 
     grid.addSegments(segments, audioSource);
     grid.clear();
@@ -188,7 +199,7 @@ describe('TranscriptGrid', () => {
       }
     ]);
 
-    grid.addSegments([{ start: 0, end: 10, text: '', score: 0 }], { name: 'Test Audio', persistentID: 'test123' });
+    grid.addSegments([{ start: 0, end: 10, text: '', score: 0 }], makeAudioSource('Test Audio', 'test123'));
     grid.setPlaybackRegionMap(playbackRegionsBySourceID);
 
     const rows = grid.getRows();
@@ -204,7 +215,7 @@ describe('TranscriptGrid', () => {
   it('should set playbackStart and playbackEnd to null when no matching playback region exists', () => {
     const playbackRegionsBySourceID = new Map<string, PlaybackRegion[]>();
 
-    grid.addSegments([{ start: 0, end: 10, text: '', score: 0 }], { name: 'Test Audio', persistentID: 'test123' });
+    grid.addSegments([{ start: 0, end: 10, text: '', score: 0 }], makeAudioSource('Test Audio', 'test123'));
     grid.setPlaybackRegionMap(playbackRegionsBySourceID);
 
     const rows = grid.getRows();
@@ -226,7 +237,7 @@ describe('TranscriptGrid', () => {
     ]);
 
     // Add a segment with start/end outside the modification range
-    grid.addSegments([{ start: 0, end: 10, text: '', score: 0 }], { name: 'Test Audio', persistentID: 'test123' });
+    grid.addSegments([{ start: 0, end: 10, text: '', score: 0 }], makeAudioSource('Test Audio', 'test123'));
 
     expect(grid.getRows()[0].playbackStart).not.toBeNull();
     expect(grid.getRows()[0].playbackEnd).not.toBeNull();
@@ -249,7 +260,7 @@ describe('TranscriptGrid', () => {
       }
     ]);
 
-    grid.addSegments([{ start: 0, end: 10, text: '', score: 0 }], { name: 'Test Audio', persistentID: 'test123' });
+    grid.addSegments([{ start: 0, end: 10, text: '', score: 0 }], makeAudioSource('Test Audio', 'test123'));
 
     // First call should update
     grid.setPlaybackRegionMap(playbackRegionsBySourceID);
