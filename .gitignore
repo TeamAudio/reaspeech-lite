@@ -1,5 +1,6 @@
 .DS_Store
 .vscode/
+assets/js/main.js
 build/
 
 # Prerequisites

@@ -5,7 +5,7 @@ const watch = args.includes('--watch');
 
 // Define build configuration
 const buildOptions = {
-  entryPoints: ['main.ts'],
+  entryPoints: ['src/App.ts'],
   bundle: true,
   outfile: '../../assets/js/main.js',
   format: 'iife',

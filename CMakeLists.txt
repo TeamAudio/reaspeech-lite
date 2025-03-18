@@ -145,6 +145,13 @@ target_sources(SharedCode INTERFACE ${SourceFiles})
 # Adds a BinaryData target for embedding assets into the binary
 include(Assets)
 
+# Check if the required JS file exists in the asset files
+set(REQUIRED_JS_FILE "${CMAKE_CURRENT_SOURCE_DIR}/assets/js/main.js")
+list(FIND AssetFiles "${REQUIRED_JS_FILE}" JS_FILE_INDEX)
+if(JS_FILE_INDEX EQUAL -1)
+    message(FATAL_ERROR "Missing required file: ${REQUIRED_JS_FILE}\nPlease run 'npm run build' from the 'source/ts' directory before building.")
+endif()
+
 # MacOS only: Cleans up folder and target organization on Xcode.
 include(XcodePrettify)
 

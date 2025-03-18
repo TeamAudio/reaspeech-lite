@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
-import App from '../main';
-import mockNative from '../mocks/MockNative';
+import App from '../src/App';
+import mockNative from './mocks/MockNative';
 
 // Spy on console.warn
 let warnSpy: any;
