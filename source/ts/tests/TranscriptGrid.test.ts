@@ -90,9 +90,14 @@ describe('TranscriptGrid', () => {
     const audioSource = makeAudioSource('Test Audio', 'test123');
 
     grid.addSegments(segments, audioSource);
+
+    const rows = grid.getRows();
+    expect(rows).toHaveLength(2);
+    (grid['gridApi'].applyTransaction as jest.Mock).mockClear();
+
     grid.clear();
 
-    expect(grid['gridApi'].applyTransaction).toHaveBeenCalledWith({ remove: [] });
+    expect(grid['gridApi'].applyTransaction).toHaveBeenCalledWith({ remove: rows });
     expect(grid.getRows()).toHaveLength(0);
   });
 
