@@ -33,9 +33,9 @@ describe('Utils', () => {
       expect(timestampToString(45.5)).toBe('0:45.500');
     });
 
-    it('should round milliseconds', () => {
+    it('should floor milliseconds', () => {
       expect(timestampToString(10.1234)).toBe('0:10.123');
-      expect(timestampToString(10.1235)).toBe('0:10.124');
+      expect(timestampToString(10.1239)).toBe('0:10.123');
     });
 
     it('should pad seconds and milliseconds with leading zeros', () => {
@@ -44,7 +44,12 @@ describe('Utils', () => {
     });
 
     it('should handle large values', () => {
-      expect(timestampToString(3661.789)).toBe('61:01.789');
+      expect(timestampToString(3661.789)).toBe('1:01:01.789');
+    });
+
+    it('should handle negative values', () => {
+      expect(timestampToString(-65.123)).toBe('-1:05.123');
+      expect(timestampToString(-3661.789)).toBe('-1:01:01.789');
     });
   });
 });

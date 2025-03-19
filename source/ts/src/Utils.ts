@@ -8,13 +8,23 @@ export function htmlEscape(str: string): string {
 }
 
 /**
- * Returns a string of the form M:SS.mmm
+ * Returns a string of the form H:MM:SS.mmm or M:SS.mmm from a number of seconds.
+ * Milliseconds are always rounded down to three decimal places.
  * @param seconds The time in seconds.
  * @returns The formatted string.
  */
 export function timestampToString(seconds: number): string {
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = seconds - minutes * 60;
-  const milliseconds = Math.round(remainingSeconds * 1000) % 1000;
-  return `${minutes}:${String(Math.floor(remainingSeconds)).padStart(2, '0')}.${String(milliseconds).padStart(3, '0')}`;
+  const neg = seconds < 0 ? '-' : '';
+  seconds = Math.abs(seconds);
+
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor(seconds / 60) % 60;
+  const wholeSeconds = Math.floor(seconds) % 60;
+  const milliseconds = Math.floor(seconds * 1000) % 1000;
+
+  if (hours > 0) {
+    return `${neg}${hours}:${String(minutes).padStart(2, '0')}:${String(wholeSeconds).padStart(2, '0')}.${String(milliseconds).padStart(3, '0')}`;
+  } else {
+    return `${neg}${minutes}:${String(wholeSeconds).padStart(2, '0')}.${String(milliseconds).padStart(3, '0')}`;
+  }
 }
