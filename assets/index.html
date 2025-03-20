@@ -7,13 +7,15 @@
     <link href="css/bootstrap.min.css" rel="stylesheet">
   </head>
 
-  <body style="overflow-y: scroll">
+  <body>
     <script src="js/bootstrap.bundle.min.js"></script>
     <script src="js/main.js"></script>
 
-    <nav class="navbar navbar-expand-md navbar-dark fixed-top bg-body-tertiary shadow">
+    <div id="alerts" class="position-fixed top-1 start-50 translate-middle-x" style="z-index: 9999"></div>
+
+    <nav class="navbar navbar-expand-md navbar-dark fixed-top bg-body-tertiary shadow" style="min-width: 800px">
       <div class="container-fluid">
-        <span class="navbar-brand">
+        <span class="navbar-brand me-0">
           <img src="img/tech-audio-logo.png" alt="Logo" width="49" height="41" style="position: absolute; left: 8px; top: 18px">
           <span style="margin-left: 52px">ReaSpeechLite</span>
         </span>
@@ -45,35 +47,23 @@
     </nav>
 
     <main class="container-fluid" style="margin-top: 85px">
-      <div id="alerts"></div>
-
       <div id="transcript" class="bg-body-tertiary p-2 rounded" style="display: none">
-        <h4 class="float-start" >Transcript</h4>
-        <div id="create-menu" class="float-end dropdown mb-2" style="display: none">
-          <button class="btn btn-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-            Create
-          </button>
-          <ul class="dropdown-menu">
-            <li><a id="create-markers" class="dropdown-item" href="javascript:">Markers</a></li>
-            <li><a id="create-regions" class="dropdown-item" href="javascript:">Regions</a></li>
-            <li><a id="create-notes" class="dropdown-item" href="javascript:">Notes</a></li>
-          </ul>
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h4 class="mb-0">Transcript</h4>
+
+          <div id="create-menu" class="dropdown" style="display: none">
+            <button class="btn btn-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+              Create
+            </button>
+            <ul class="dropdown-menu">
+              <li><a id="create-markers" class="dropdown-item" href="javascript:">Markers</a></li>
+              <li><a id="create-regions" class="dropdown-item" href="javascript:">Regions</a></li>
+              <li><a id="create-notes" class="dropdown-item" href="javascript:">Notes</a></li>
+            </ul>
+          </div>
         </div>
 
-        <table class="table table-sm table-striped">
-          <thead>
-            <tr>
-              <th>Start</th>
-              <th>End</th>
-              <th>Text</th>
-              <th>Score</th>
-              <th>Source</th>
-            </tr>
-          </thead>
-
-          <tbody>
-          </tbody>
-        </table>
+        <div id="transcript-grid" style="height: calc(100vh - 152px); min-height: 200px"></div>
       </div>
     </main>
 

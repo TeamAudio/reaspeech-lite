@@ -10,7 +10,8 @@ const buildOptions = {
   outfile: '../../assets/js/main.js',
   format: 'iife',
   target: 'es2019',
-  minify: true,
+  minify: false,
+  sourcemap: true,
 };
 
 // Helper function to get formatted timestamp
