@@ -16,7 +16,7 @@ declare global {
 
 export default class App {
   private native: Native;
-  private transcriptGrid: TranscriptGrid;
+  public transcriptGrid: TranscriptGrid;
   public state: any;
 
   constructor() {
@@ -31,17 +31,31 @@ export default class App {
   }
 
   init() {
+    this.initState();
+    this.initProcessButton();
+    this.initCreateButton();
+    this.startPolling();
+  }
+
+  initState() {
     this.loadState().then(() => {
       this.initModels();
       this.initLanguages();
       this.initTranscriptGrid();
     });
+  }
 
+  initProcessButton() {
     document.getElementById('process-button').onclick = () => { this.handleProcess(); };
+  }
+
+  initCreateButton() {
     document.getElementById('create-markers').onclick = () => { this.handleCreateMarkers('markers'); };
     document.getElementById('create-regions').onclick = () => { this.handleCreateMarkers('regions'); };
     document.getElementById('create-notes').onclick = () => { this.handleCreateMarkers('notes'); };
+  }
 
+  startPolling() {
     setInterval(() => {
       this.update();
     }, 500);
@@ -50,6 +64,7 @@ export default class App {
   loadState() {
     if (!window.__JUCE__.initialisationData.webState
       || !window.__JUCE__.initialisationData.webState[0]) {
+      console.warn('Missing web state');
       return Promise.resolve();
     }
     try {
@@ -68,48 +83,39 @@ export default class App {
   }
 
   initModels() {
-    this.native.getModels().then((models) => {
+    return this.native.getModels().then((models) => {
       const select = document.getElementById('model-select') as HTMLSelectElement;
 
       models.forEach((model) => {
         const option = document.createElement('option');
         option.selected = (this.state.modelName === model.name);
         option.value = model.name;
-        option.innerText = model.label;
+        option.textContent = model.label;
         select.appendChild(option);
       });
 
-      select.onchange = () => {
-        this.state.modelName = select.options[select.selectedIndex].value;
-        this.saveState();
-      };
+      select.onchange = this.handleModelChange.bind(this);
     });
   }
 
   initLanguages() {
-    this.native.getWhisperLanguages().then((languages) => {
+    return this.native.getWhisperLanguages().then((languages) => {
       const select = document.getElementById('language-select') as HTMLSelectElement;
 
       languages.forEach((language) => {
         const option = document.createElement('option');
         option.selected = (this.state.language === language.code);
         option.value = language.code;
-        option.innerText = language.name.charAt(0).toUpperCase() + language.name.slice(1);
+        option.textContent = language.name.charAt(0).toUpperCase() + language.name.slice(1);
         select.appendChild(option);
       });
 
-      select.onchange = () => {
-        this.state.language = select.options[select.selectedIndex].value;
-        this.saveState();
-      };
-    });
+      select.onchange = this.handleLanguageChange.bind(this);
 
-    const translateCheckbox = document.getElementById('translate-checkbox') as HTMLInputElement;
-    translateCheckbox.checked = this.state.translate;
-    translateCheckbox.onchange = () => {
-      this.state.translate = translateCheckbox.checked;
-      this.saveState();
-    };
+      const translateCheckbox = document.getElementById('translate-checkbox') as HTMLInputElement;
+      translateCheckbox.checked = this.state.translate;
+      translateCheckbox.onchange = this.handleTranslateChange.bind(this);
+    });
   }
 
   initTranscriptGrid() {
@@ -124,6 +130,23 @@ export default class App {
         });
       }
     }
+  }
+
+  handleModelChange() {
+    const select = document.getElementById('model-select') as HTMLSelectElement;
+    this.state.modelName = select.options[select.selectedIndex].value;
+    return this.saveState();
+  }
+
+  handleLanguageChange() {
+    const select = document.getElementById('language-select') as HTMLSelectElement;
+    this.state.language = select.options[select.selectedIndex].value;
+    return this.saveState();
+  }
+
+  handleTranslateChange() {
+    this.state.translate = (document.getElementById('translate-checkbox') as HTMLInputElement).checked;
+    return this.saveState();
   }
 
   handleProcess() {
@@ -142,19 +165,18 @@ export default class App {
       translate: translate
     };
 
-    this.native.getAudioSources().then((audioSources) => {
+    return this.native.getAudioSources().then((audioSources: AudioSource[]) => {
       const processNextAudioSource = () => {
         if (audioSources.length === 0) {
           this.enableProcessButton();
           this.hideSpinner();
           this.setProcessText('Process');
-          this.saveState();
-          return;
+          return this.saveState();
         }
 
         const audioSource = audioSources.shift();
 
-        this.native.transcribeAudioSource(audioSource.persistentID, asrOptions).then((result) => {
+        return this.native.transcribeAudioSource(audioSource.persistentID, asrOptions).then((result) => {
           if (result.segments && result.segments.length > 0) {
             this.showTranscript();
             this.transcriptGrid.addSegments(result.segments, audioSource);
@@ -165,15 +187,15 @@ export default class App {
             audioSources.length = 0;
           }
 
-          processNextAudioSource();
+          return processNextAudioSource();
         });
       };
 
-      processNextAudioSource();
+      return processNextAudioSource();
     });
   }
 
-  handleCreateMarkers(markerType) {
+  handleCreateMarkers(markerType: string) {
     const rows = this.transcriptGrid.getRows();
     let markers = [];
 
@@ -188,11 +210,13 @@ export default class App {
     }
 
     if (markers.length > 0) {
-      this.native.createMarkers(markers, markerType).then((result) => {
+      return this.native.createMarkers(markers, markerType).then((result) => {
         if (result && result.error) {
           this.showAlert('danger', '<b>Error:</b> ' + htmlEscape(result.error));
         }
       });
+    } else {
+      return Promise.resolve();
     }
   }
 
@@ -288,13 +312,14 @@ export default class App {
   clearTranscript() {
     this.transcriptGrid.clear();
     this.state.transcript = null;
-    this.saveState();
+    return this.saveState();
   }
 
   playAt(seconds: number) {
-    this.native.stop();
-    this.native.setPlaybackPosition(seconds).then(() => {
-      this.native.play();
+    return this.native.stop().then(() => {
+      return this.native.setPlaybackPosition(seconds).then(() => {
+        return this.native.play();
+      });
     });
   }
 }
