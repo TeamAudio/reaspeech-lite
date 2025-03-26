@@ -322,6 +322,34 @@ describe('App', () => {
     expect(app.state.transcript).toBeNull();
   });
 
+  it('collects playback regions by audio source', () => {
+    const app = new App();
+
+    const region1 = { playbackStart: 0, playbackEnd: 1, modificationStart: 0, modificationEnd: 1, audioSourcePersistentID: 'audio1' };
+    const region2 = { playbackStart: 2, playbackEnd: 3, modificationStart: 2, modificationEnd: 3, audioSourcePersistentID: 'audio1' };
+    const region3 = { playbackStart: 4, playbackEnd: 5, modificationStart: 4, modificationEnd: 5, audioSourcePersistentID: 'audio2' };
+    const region4 = { playbackStart: 6, playbackEnd: 7, modificationStart: 6, modificationEnd: 7, audioSourcePersistentID: 'audio2' };
+
+    const regionSequences = [
+      {
+        name: 'Track 1',
+        orderIndex: 0,
+        playbackRegions: [region1, region2, region3]
+      },
+      {
+        name: 'Track 2',
+        orderIndex: 1,
+        playbackRegions: [region4]
+      }
+    ];
+
+    const regions = app.collectPlaybackRegionsByAudioSource(regionSequences);
+
+    expect(regions.size).toBe(2);
+    expect(regions.get('audio1')).toEqual([region1, region2]);
+    expect(regions.get('audio2')).toEqual([region3, region4]);
+  });
+
   it('creates markers correctly', async () => {
     const app = new App();
 
