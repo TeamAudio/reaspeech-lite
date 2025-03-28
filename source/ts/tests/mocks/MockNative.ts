@@ -5,17 +5,32 @@ export class MockNative {
   private mockFunctions: Map<string, jest.Mock> = new Map();
 
   // Common native functions exposed as properties
+  public canCreateMarkers: jest.Mock;
+  public createMarkers: jest.Mock;
+  public getAudioSources: jest.Mock;
   public getModels: jest.Mock;
+  public getWhisperLanguages: jest.Mock;
+  public play: jest.Mock;
+  public setPlaybackPosition: jest.Mock;
   public setWebState: jest.Mock;
-  // Add other common functions here
+  public stop: jest.Mock;
+  public transcribeAudioSource: jest.Mock;
 
   constructor() {
     // Setup the global Juce.getNativeFunction mock
     this.setupJuceNativeFunctionMock();
 
     // Initialize common mocks (without setting defaults yet)
+    this.canCreateMarkers = this.createMock('canCreateMarkers');
+    this.createMarkers = this.createMock('createMarkers');
+    this.getAudioSources = this.createMock('getAudioSources');
     this.getModels = this.createMock('getModels');
+    this.getWhisperLanguages = this.createMock('getWhisperLanguages');
+    this.play = this.createMock('play');
+    this.setPlaybackPosition = this.createMock('setPlaybackPosition');
     this.setWebState = this.createMock('setWebState');
+    this.stop = this.createMock('stop');
+    this.transcribeAudioSource = this.createMock('transcribeAudioSource');
 
     // Initialize all mocks with their default values
     this.reset();
@@ -68,10 +83,16 @@ export class MockNative {
     });
 
     // Set default implementations for common mocks
+    this.canCreateMarkers.mockReturnValue(Promise.resolve(true));
+    this.createMarkers.mockReturnValue(Promise.resolve());
+    this.getAudioSources.mockReturnValue(Promise.resolve([]));
     this.getModels.mockReturnValue(Promise.resolve([]));
+    this.getWhisperLanguages.mockReturnValue(Promise.resolve([]));
+    this.play.mockReturnValue(Promise.resolve());
+    this.setPlaybackPosition.mockReturnValue(Promise.resolve());
     this.setWebState.mockReturnValue(Promise.resolve());
-
-    // Add defaults for any other mocks here
+    this.stop.mockReturnValue(Promise.resolve());
+    this.transcribeAudioSource.mockReturnValue(Promise.resolve({"segments": []}));
   }
 }
 
