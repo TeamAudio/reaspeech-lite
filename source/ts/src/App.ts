@@ -71,6 +71,7 @@ export default class App {
       this.state = JSON.parse(window.__JUCE__.initialisationData.webState[0]);
     } catch (e) {
       console.warn('Failed to parse web state:', e);
+      this.showAlert('danger', '<b>Error:</b> Failed to read project data!');
     }
     return Promise.resolve();
   }

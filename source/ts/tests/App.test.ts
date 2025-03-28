@@ -103,6 +103,9 @@ describe('App', () => {
     expect(app.state.transcript).toBeNull();
 
     expect(warnSpy).toHaveBeenCalled();
+
+    const alerts = document.getElementById('alerts') as HTMLElement;
+    expect(alerts.innerHTML).toContain('Failed to read project data');
   });
 
   it('saves state', async () => {
