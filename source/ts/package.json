@@ -9,6 +9,7 @@
     "test": "jest --config=config/jest.config.js"
   },
   "dependencies": {
+    "ag-grid-community": "^33.1.1",
     "juce-framework-frontend": "file:../../JUCE/modules/juce_gui_extra/native/javascript"
   },
   "devDependencies": {
