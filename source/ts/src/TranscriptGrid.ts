@@ -205,18 +205,15 @@ export default class TranscriptGrid {
   }
 
   scoreColor(value: number): string {
-    if (value > 0.9) {
-      return "#a3ff00";
-    } else if (value > 0.8) {
-      return "#2cba00";
-    } else if (value > 0.7) {
-      return "#ffa700";
-    } else if (value > 0.0) {
-      return "#ff2c2f";
-    } else {
-      return "transparent";
-    }
+    return this.scorePalette.getColor(value, "transparent");
   }
+
+  private scorePalette = new ScorePalette([
+    { limit: 0.9, color: "#a3ff00" },
+    { limit: 0.8, color: "#2cba00" },
+    { limit: 0.7, color: "#ffa700" },
+    { limit: 0.0, color: "#ff2c2f" }
+  ]);
 
   setPlaybackRegionMap(playbackRegionsBySourceID: Map<string, PlaybackRegion[]>) {
     const updatedRows = this.rowData.map(row => {
@@ -248,5 +245,28 @@ export default class TranscriptGrid {
 
   updateRows(rows: TranscriptRow[]) {
     this.gridApi.applyTransaction({ update: rows });
+  }
+}
+
+interface ScorePaletteThreshold {
+  limit: number;
+  color: string;
+}
+
+class ScorePalette {
+  private thresholds: ScorePaletteThreshold[];
+
+  constructor(thresholds: ScorePaletteThreshold[]) {
+    this.thresholds = thresholds;
+  }
+
+  getColor(value: number, defaultColor: string): string {
+    for (const threshold of this.thresholds) {
+      if (value > threshold.limit) {
+        return threshold.color;
+      }
+    }
+
+    return defaultColor;
   }
 }
