@@ -100,26 +100,26 @@ export default class TranscriptGrid {
       {
         field: 'playbackStart',
         headerName: 'Start',
-        cellRenderer: this.startTimeCellRenderer,
+        cellRenderer: this.renderStartTime.bind(this),
         width: 100
       },
       {
         field: 'playbackEnd',
         headerName: 'End',
-        cellRenderer: this.endTimeCellRenderer,
+        cellRenderer: this.renderEndTime.bind(this),
         width: 100
       },
       {
         field: 'text',
         headerName: 'Text',
         filter: true,
-        cellRenderer: this.textCellRenderer,
+        cellRenderer: this.renderText.bind(this),
         flex: 1
       },
       {
         field: 'score',
         headerName: 'Score',
-        cellRenderer: this.scoreCellRenderer,
+        cellRenderer: this.renderScore.bind(this),
         width: 100
       },
       {
@@ -171,19 +171,49 @@ export default class TranscriptGrid {
     }
   }
 
-  scoreColor(value: number): string {
-    if (value > 0.9) {
-      return "#a3ff00";
-    } else if (value > 0.8) {
-      return "#2cba00";
-    } else if (value > 0.7) {
-      return "#ffa700";
-    } else if (value > 0.0) {
-      return "#ff2c2f";
-    } else {
-      return "transparent";
+  renderStartTime(params: ICellRendererParams) {
+    const linkClasses = 'link-offset-2 link-underline link-underline-opacity-0 link-underline-opacity-50-hover small';
+    const time = params.value;
+    if (time === null) {
+      return '';
     }
+    return `<a href="javascript:" class="${linkClasses}" data-segment-time="${time}">${timestampToString(time)}</a>`;
   }
+
+  renderEndTime(params: ICellRendererParams) {
+    const time = params.value;
+    if (time === null) {
+      return '';
+    }
+    return `<span class="small text-muted" data-segment-time="${time}">${timestampToString(time)}</span>`;
+  }
+
+  renderText(params: ICellRendererParams) {
+    const linkClasses = 'link-light link-offset-2 link-underline link-underline-opacity-0 link-underline-opacity-50-hover';
+    return `<a href="javascript:" class="${linkClasses}">${htmlEscape(params.value)}</a>`;
+  }
+
+  renderScore(params: ICellRendererParams) {
+    const score = params.value;
+    const color = this.scoreColor(score);
+    const percentage = score * 100;
+    return `<div class="d-flex align-items-center h-100">
+              <div class="progress w-100" style="height: 2px">
+                <div class="progress-bar" style="width: ${percentage}%; background-color: ${color}"></div>
+              </div>
+            </div>`;
+  }
+
+  scoreColor(value: number): string {
+    return this.scorePalette.getColor(value, "transparent");
+  }
+
+  private scorePalette = new ScorePalette([
+    { limit: 0.9, color: "#a3ff00" },
+    { limit: 0.8, color: "#2cba00" },
+    { limit: 0.7, color: "#ffa700" },
+    { limit: 0.0, color: "#ff2c2f" }
+  ]);
 
   setPlaybackRegionMap(playbackRegionsBySourceID: Map<string, PlaybackRegion[]>) {
     const updatedRows = this.rowData.map(row => {
@@ -216,38 +246,27 @@ export default class TranscriptGrid {
   updateRows(rows: TranscriptRow[]) {
     this.gridApi.applyTransaction({ update: rows });
   }
+}
 
-  // Define cell renderer methods as instance properties (arrow functions to preserve "this" context)
-  startTimeCellRenderer = (params: ICellRendererParams) => {
-    const linkClasses = 'link-offset-2 link-underline link-underline-opacity-0 link-underline-opacity-50-hover small';
-    const time = params.value;
-    if (time === null) {
-      return '';
+interface ScorePaletteThreshold {
+  limit: number;
+  color: string;
+}
+
+class ScorePalette {
+  private thresholds: ScorePaletteThreshold[];
+
+  constructor(thresholds: ScorePaletteThreshold[]) {
+    this.thresholds = thresholds;
+  }
+
+  getColor(value: number, defaultColor: string): string {
+    for (const threshold of this.thresholds) {
+      if (value > threshold.limit) {
+        return threshold.color;
+      }
     }
-    return `<a href="javascript:" class="${linkClasses}" data-segment-time="${time}">${timestampToString(time)}</a>`;
-  }
 
-  endTimeCellRenderer = (params: ICellRendererParams) => {
-    const time = params.value;
-    if (time === null) {
-      return '';
-    }
-    return `<span class="small text-muted" data-segment-time="${time}">${timestampToString(time)}</span>`;
-  }
-
-  textCellRenderer = (params: ICellRendererParams) => {
-    const linkClasses = 'link-light link-offset-2 link-underline link-underline-opacity-0 link-underline-opacity-50-hover';
-    return `<a href="javascript:" class="${linkClasses}">${htmlEscape(params.value)}</a>`;
-  }
-
-  scoreCellRenderer = (params: ICellRendererParams) => {
-    const score = params.value;
-    const color = this.scoreColor(score);
-    const percentage = score * 100;
-    return `<div class="d-flex align-items-center h-100">
-              <div class="progress w-100" style="height: 2px">
-                <div class="progress-bar" style="width: ${percentage}%; background-color: ${color}"></div>
-              </div>
-            </div>`;
+    return defaultColor;
   }
 }
