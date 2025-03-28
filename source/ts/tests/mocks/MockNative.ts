@@ -5,8 +5,8 @@ export class MockNative {
   private mockFunctions: Map<string, jest.Mock> = new Map();
 
   // Common native functions exposed as properties
-  public canCreateMarkers: jestMock;
-  public createMarkers: jestMock;
+  public canCreateMarkers: jest.Mock;
+  public createMarkers: jest.Mock;
   public getAudioSources: jest.Mock;
   public getModels: jest.Mock;
   public getWhisperLanguages: jest.Mock;
