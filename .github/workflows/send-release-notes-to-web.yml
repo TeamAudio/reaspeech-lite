@@ -75,7 +75,6 @@ jobs:
           GH_TOKEN: ${{ secrets.RELEASE_NOTES_TO_BLOG_TOKEN }}
         run: |
           echo "============= TOKEN VALIDATION ============="
-
           echo "Checking GitHub token permissions..."
           TOKEN_PERMISSIONS=$(curl -s "https://api.github.com/user" \
             -H "Authorization: Bearer $GH_TOKEN" | jq -r '.login')
@@ -201,7 +200,6 @@ jobs:
           echo "✅ Token validation complete - all permissions verified!"
 
           echo "============= SENDING REQUEST ============="
-
           echo "trying with actual payload:"
           # Store the output in a file instead of command substitution
           curl -v -s -o response.txt \
