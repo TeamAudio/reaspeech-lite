@@ -2,7 +2,7 @@ name: Publish GitHub Release Notes to website repo to create blog post
 
 on:
   release:
-    types: [published]  # Trigger on release publication
+    types: [published]  
 
 jobs:
   publish-release-notes:
@@ -29,7 +29,7 @@ jobs:
           # Extract repository name 
           REPO_NAME=$(echo "${{ github.repository }}" | cut -d'/' -f2)
             
-          CURRENT_DATE=$(date +'%Y-%m-%d') # to be used later in autolabeling/autoformatting 
+          CURRENT_DATE=$(date +'%Y-%m-%d')
 
           # Construct proper repository_dispatch payload
           jq -n \
@@ -52,16 +52,10 @@ jobs:
               }
             }' > payload.json
 
-            echo "============= PAYLOAD VALIDATION ============="
+            echo "============= JSON VALIDATION ============="
             if ! jq empty payload.json 2>/dev/null; then
               echo "::error::Final JSON payload is invalid."
-              echo "Creating fallback minimal payload..."
-              echo '{"event_type":"trigger-workflow","client_payload":{"service":"TeamAudio","markdown":"Error in JSON formatting"}}' > payload.json
-              
-              if ! jq empty payload.json 2>/dev/null; then
-                echo "::error::Even fallback payload is invalid! Using absolute minimal payload."
-                echo '{"event_type":"trigger-workflow","client_payload":{}}' > payload.json
-              fi
+
             else
               echo "Final JSON validation successful!"
               # Pretty print for logs
@@ -75,12 +69,13 @@ jobs:
           GH_TOKEN: ${{ secrets.RELEASE_NOTES_TO_BLOG_TOKEN }}
         run: |
           echo "============= TOKEN VALIDATION ============="
+
           echo "Checking GitHub token permissions..."
           TOKEN_PERMISSIONS=$(curl -s "https://api.github.com/user" \
             -H "Authorization: Bearer $GH_TOKEN" | jq -r '.login')
           
           if [[ "$TOKEN_PERMISSIONS" == "null" || -z "$TOKEN_PERMISSIONS" ]]; then
-            echo "::warning::Authentication failed. Token doesn't have proper permissions or is invalid."
+            echo "::error::Authentication failed. Token doesn't have proper permissions or is invalid."
             echo "Make sure your GH_PAT secret has repo and workflow scopes."
           else
             echo "Authenticated as: $TOKEN_PERMISSIONS"
@@ -90,7 +85,7 @@ jobs:
           # Check if workflow file exists
           echo "Listing workflow files..."
           WORKFLOWS=$(curl -s \
-            "https://api.github.com/repos/TeamAudio/techaudio-testing/contents/.github/workflows" \
+            "https://api.github.com/repos/TeamAudio/techaudio-web/contents/.github/workflows" \
             -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer $GH_TOKEN")
           
@@ -103,11 +98,9 @@ jobs:
             echo "$WORKFLOWS" | jq '.'
             ERROR_MSG=$(echo "$WORKFLOWS" | jq -r '.message // "No error message provided"')
             echo "Error message: $ERROR_MSG"
-            echo "Using default workflow filename."
-            WORKFLOW_FILE="create_new_blog_post.yml"
           fi
 
-          # create compact json to pass
+          echo "create compact version of json to pass"
           jq -c '.' payload.json > payload_compact.json
 
           echo "============= CHECKING JSON CONTENT ============="
@@ -131,7 +124,7 @@ jobs:
 
           # Check client_payload with error handling
           echo -n "- Has client_payload: "
-          if jq -e 'has("client_payload")' payload_compact.json > /dev/null; then
+          if jq -e 'has("client_payload")' payload.json > /dev/null; then
             echo "true"
             
             # Only check client payload keys if client_payload exists
@@ -161,6 +154,7 @@ jobs:
           fi
 
           echo "============= AUTHENTICATION CHECK ============="
+          echo "Gathering logs for debugging..."
           # First do a verbose request to capture detailed logs
 
           # 1. Check basic authentication
@@ -179,7 +173,7 @@ jobs:
           REPO_TEST=$(curl -s -o repo_test.txt -w "%{http_code}" \
             -H "Authorization: Bearer $GH_TOKEN" \
             -H "Accept: application/vnd.github+json" \
-            https://api.github.com/repos/TeamAudio/techaudio-testing)
+            https://api.github.com/repos/TeamAudio/techaudio-web)
 
           if [[ "$REPO_TEST" -ne 200 ]]; then
             echo "❌ Repository access denied with status code: $REPO_TEST"
@@ -200,15 +194,16 @@ jobs:
           echo "✅ Token validation complete - all permissions verified!"
 
           echo "============= SENDING REQUEST ============="
+
           echo "trying with actual payload:"
           # Store the output in a file instead of command substitution
           curl -v -s -o response.txt \
             -X POST \
             -H "Accept: application/vnd.github+json" \
-            -H "Authorization: Bearer ${{ secrets.RELEASE_NOTES_TO_BLOG_TOKEN }}" \
+            -H "Authorization: Bearer $GH_TOKEN" \
             -H "Content-Type: application/json" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/repos/TeamAudio/techaudio-testing/dispatches" \
+            "https://api.github.com/repos/TeamAudio/techaudio-web/dispatches" \
             --data @payload_compact.json \
             -w "%{http_code}" 2>curl_error.txt > http_code.txt
           
