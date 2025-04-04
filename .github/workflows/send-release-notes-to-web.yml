@@ -1,0 +1,236 @@
+name: Publish GitHub Release Notes to website repo to create blog post
+
+on:
+  release:
+    types: [published]  # Trigger on release publication
+
+jobs:
+  publish-release-notes:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set RELEASE_NOTES environment variable
+        run: |
+          # Write the release notes to a temporary file 
+          echo "${{ github.event.release.body }}" > release_notes.txt
+          
+          # save to environment
+          echo "RELEASE_NOTES<<EOF" >> "$GITHUB_ENV"
+          cat release_notes.txt >> "$GITHUB_ENV"
+          echo "EOF" >> "$GITHUB_ENV"
+      
+      
+      - name: Create JSON payload
+        id: create_json_payload
+        run: |
+          # Extract repository name 
+          REPO_NAME=$(echo "${{ github.repository }}" | cut -d'/' -f2)
+            
+          CURRENT_DATE=$(date +'%Y-%m-%d') # to be used later in autolabeling/autoformatting 
+
+          # Construct proper repository_dispatch payload
+          jq -n \
+            --arg event_type "trigger-workflow" \
+            --arg service "TeamAudio" \
+            --arg version "${{ github.event.release.tag_name }}" \
+            --arg source_repo "$REPO_NAME" \
+            --arg markdown "$RELEASE_NOTES" \
+            --arg date "$CURRENT_DATE" \
+            '{
+              "event_type": $event_type,
+              "client_payload": {
+                "service": $service,
+                "version": $version, 
+                "source_repo": $source_repo,
+                "date": $date,
+                "markdown": $markdown,
+                "unit": false,
+                "integration": true
+              }
+            }' > payload.json
+
+            echo "============= PAYLOAD VALIDATION ============="
+            if ! jq empty payload.json 2>/dev/null; then
+              echo "::error::Final JSON payload is invalid."
+              echo "Creating fallback minimal payload..."
+              echo '{"event_type":"trigger-workflow","client_payload":{"service":"TeamAudio","markdown":"Error in JSON formatting"}}' > payload.json
+              
+              if ! jq empty payload.json 2>/dev/null; then
+                echo "::error::Even fallback payload is invalid! Using absolute minimal payload."
+                echo '{"event_type":"trigger-workflow","client_payload":{}}' > payload.json
+              fi
+            else
+              echo "Final JSON validation successful!"
+              # Pretty print for logs
+              echo "Final validated payload:"
+              cat payload.json | jq '.'
+            fi
+
+      - name: Send JSON to target repo
+        id: send_json
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_NOTES_TO_BLOG_TOKEN }}
+        run: |
+          echo "============= TOKEN VALIDATION ============="
+
+          echo "Checking GitHub token permissions..."
+          TOKEN_PERMISSIONS=$(curl -s "https://api.github.com/user" \
+            -H "Authorization: Bearer $GH_TOKEN" | jq -r '.login')
+          
+          if [[ "$TOKEN_PERMISSIONS" == "null" || -z "$TOKEN_PERMISSIONS" ]]; then
+            echo "::warning::Authentication failed. Token doesn't have proper permissions or is invalid."
+            echo "Make sure your GH_PAT secret has repo and workflow scopes."
+          else
+            echo "Authenticated as: $TOKEN_PERMISSIONS"
+          fi
+          
+          echo "============= WORKFLOW FILE VALIDATION ============="
+          # Check if workflow file exists
+          echo "Listing workflow files..."
+          WORKFLOWS=$(curl -s \
+            "https://api.github.com/repos/TeamAudio/techaudio-testing/contents/.github/workflows" \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GH_TOKEN")
+          
+          if echo "$WORKFLOWS" | jq -e 'type == "array"' > /dev/null; then
+            echo "Available workflow files:"
+            echo "$WORKFLOWS" | jq -r '.[] | .name'
+            
+          else
+            echo "::error::Could not list workflow files. API returned:"
+            echo "$WORKFLOWS" | jq '.'
+            ERROR_MSG=$(echo "$WORKFLOWS" | jq -r '.message // "No error message provided"')
+            echo "Error message: $ERROR_MSG"
+            echo "Using default workflow filename."
+            WORKFLOW_FILE="create_new_blog_post.yml"
+          fi
+
+          # create compact json to pass
+          jq -c '.' payload.json > payload_compact.json
+
+          echo "============= CHECKING JSON CONTENT ============="
+          echo "Raw content:"
+          cat payload.json
+          echo ""
+
+          echo "Pretty-printed JSON:"
+          jq '.' payload.json
+
+          echo "Compact JSON:"
+          cat payload_compact.json
+
+          # Check event_type with error handling
+          echo -n "- Event type: "
+          if jq -e 'has("event_type")' payload_compact.json > /dev/null; then
+            jq -r '.event_type' payload_compact.json
+          else
+            echo "ERROR: event_type key missing!"
+          fi
+
+          # Check client_payload with error handling
+          echo -n "- Has client_payload: "
+          if jq -e 'has("client_payload")' payload_compact.json > /dev/null; then
+            echo "true"
+            
+            # Only check client payload keys if client_payload exists
+            echo -n "- Client payload keys: "
+            jq -r '.client_payload | keys | join(", ")' payload_compact.json
+            
+            # Check markdown with nested conditional
+            echo -n "- Markdown length: "
+            if jq -e '.client_payload | has("markdown")' payload_compact.json > /dev/null; then
+              jq -r '.client_payload.markdown | length' payload_compact.json
+              echo " characters"
+            else
+              echo "ERROR: markdown key missing in client_payload!"
+            fi
+          else
+            echo "false (ERROR: client_payload section missing!)"
+          fi
+
+          echo "File size check:"
+          wc -c payload_compact.json
+
+          echo "Validating JSON format one more time:"
+          if jq empty payload_compact.json 2>/dev/null; then
+            echo "✓ JSON format is valid"
+          else
+            echo "✗ JSON format is INVALID!"
+          fi
+
+          echo "============= AUTHENTICATION CHECK ============="
+          # First do a verbose request to capture detailed logs
+
+          # 1. Check basic authentication
+          AUTH_TEST=$(curl -s -o auth_test.txt -w "%{http_code}" \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/user)
+
+          if [[ "$AUTH_TEST" -ne 200 ]]; then
+            echo "❌ Token authentication failed with status code: $AUTH_TEST"
+            cat auth_test.txt
+            exit 1
+          fi
+
+          # 2. Check repository access
+          REPO_TEST=$(curl -s -o repo_test.txt -w "%{http_code}" \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/TeamAudio/techaudio-testing)
+
+          if [[ "$REPO_TEST" -ne 200 ]]; then
+            echo "❌ Repository access denied with status code: $REPO_TEST"
+            cat repo_test.txt
+            exit 1
+          fi
+
+          # 3. Check specific permissions
+          SCOPES=$(curl -s -I -H "Authorization: Bearer $GH_TOKEN" \
+            https://api.github.com/user | grep -i "x-oauth-scopes" | cut -d':' -f2-)
+
+          if [[ ! "$SCOPES" =~ "repo" ]]; then
+            echo "❌ Token missing required 'repo' scope!"
+            echo "Current scopes: $SCOPES"
+            exit 1
+          fi
+
+          echo "✅ Token validation complete - all permissions verified!"
+
+          echo "============= SENDING REQUEST ============="
+
+          echo "trying with actual payload:"
+          # Store the output in a file instead of command substitution
+          curl -v -s -o response.txt \
+            -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.RELEASE_NOTES_TO_BLOG_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/TeamAudio/techaudio-testing/dispatches" \
+            --data @payload_compact.json \
+            -w "%{http_code}" 2>curl_error.txt > http_code.txt
+          
+          CURL_EXIT_CODE=$?
+          HTTP_CODE=$(cat http_code.txt)
+
+          if [[ $CURL_EXIT_CODE -ne 0 ]]; then
+            echo "::error::Curl command failed with exit code $CURL_EXIT_CODE"
+            echo "Error output:"
+            cat curl_error.txt
+          else
+            # Process HTTP response as before
+            echo "Request logs:"    
+            if [[ "$HTTP_CODE" -ge 200 && "$HTTP_CODE" -lt 300 ]]; then
+              echo "::notice::Workflow did not error!"
+            else
+              echo "::error::Failed to trigger workflow. HTTP Status: $HTTP_CODE"
+              echo "curl response:"
+              cat response.txt
+            fi
+          fi
+
+          echo "Script completed with exit code $?"
