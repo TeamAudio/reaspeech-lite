@@ -18,6 +18,7 @@ Name: "vst3"; Description: "VST3 plugin"; Types: full custom
 ArchitecturesInstallIn64BitMode=x64compatible
 ArchitecturesAllowed=x64compatible
 AppName={#ProductName}
+AppVerName={#ProductName} {#MatrixName} {#Version}
 OutputBaseFilename={#ProductName}-{#Version}-{#MatrixName}
 AppCopyright=Copyright (C) {#Year} {#Publisher}
 AppPublisher={#Publisher}
