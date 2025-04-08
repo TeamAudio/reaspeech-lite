@@ -184,6 +184,15 @@ jobs:
           echo "MATRIX_NAME=${{ matrix.name }}" >> $GITHUB_ENV
           echo "ARTIFACT_NAME=${{ env.PRODUCT_NAME }}-${{ env.VERSION }}-${{ matrix.name }}" >> $GITHUB_ENV
 
+      - name: Copy CUBLAS DLL for Windows CUDA build
+        if: ${{ matrix.name == 'WindowsCUDA' }}
+        run: |
+          CUDA_BIN_DIR="$(dirname "$(which nvcc)")/"
+          CUBLAS_DLL="${CUDA_BIN_DIR}/cublas64_12.dll"
+          echo "Copying ${CUBLAS_DLL} to ${{ env.VST3_PATH }}/Contents/x86_64-win"
+          cp "${CUBLAS_DLL}" "${{ env.VST3_PATH }}/Contents/x86_64-win/"
+          echo "CUDA DLL copied successfully"
+
       - name: Pluginval
         if: ${{ matrix.name != 'WindowsCUDA' && matrix.name != 'LinuxCUDA' }}
         run: |
