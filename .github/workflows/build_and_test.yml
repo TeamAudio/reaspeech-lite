@@ -42,7 +42,7 @@ jobs:
           - name: LinuxCUDA
             os: ubuntu-22.04
             cuda: true
-            cuda-version: '12.3.0'
+            cuda-version: '12.4.0'
             extra-flags: -G Ninja -DGGML_CUDA=1
           - name: macOS
             os: macos-14
@@ -54,7 +54,7 @@ jobs:
           - name: WindowsCUDA
             os: windows-latest
             cuda: true
-            cuda-version: '12.3.0'
+            cuda-version: '12.4.0'
             extra-flags: -DGGML_CUDA=1 -DGGML_STATIC=1
 
     steps:
@@ -75,7 +75,7 @@ jobs:
       # Set up cuda-toolkit for CUDA targets
       - name: Set up CUDA
         if: ${{ matrix.cuda == true }}
-        uses: Jimver/cuda-toolkit@v0.2.21
+        uses: Jimver/cuda-toolkit@v0.2.22
         with:
           cuda: ${{ matrix.cuda-version }}
 
