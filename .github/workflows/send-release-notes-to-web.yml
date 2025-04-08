@@ -14,12 +14,10 @@ jobs:
 
       - name: Set RELEASE_NOTES environment variable
         run: |
-          # Write the release notes to a temporary file 
-          echo "${{ github.event.release.body }}" > release_notes.txt
           
-          # save to environment
+          # save release notes to environment
           echo "RELEASE_NOTES<<EOF" >> "$GITHUB_ENV"
-          cat release_notes.txt >> "$GITHUB_ENV"
+          cat "${{ github.event.release.body }}" >> "$GITHUB_ENV"
           echo "EOF" >> "$GITHUB_ENV"
       
       
@@ -55,6 +53,7 @@ jobs:
             echo "============= JSON VALIDATION ============="
             if ! jq empty payload.json 2>/dev/null; then
               echo "::error::Final JSON payload is invalid."
+              exit 1
 
             else
               echo "Final JSON validation successful!"
@@ -76,7 +75,8 @@ jobs:
           
           if [[ "$TOKEN_PERMISSIONS" == "null" || -z "$TOKEN_PERMISSIONS" ]]; then
             echo "::error::Authentication failed. Token doesn't have proper permissions or is invalid."
-            echo "Make sure your GH_PAT secret has repo and workflow scopes."
+            echo "Make sure your RELEASE_NOTES_TO_BLOG_TOKEN secret has repo and workflow scopes."
+            exit 1
           else
             echo "Authenticated as: $TOKEN_PERMISSIONS"
           fi
@@ -98,6 +98,7 @@ jobs:
             echo "$WORKFLOWS" | jq '.'
             ERROR_MSG=$(echo "$WORKFLOWS" | jq -r '.message // "No error message provided"')
             echo "Error message: $ERROR_MSG"
+            exit 1
           fi
 
           echo "create compact version of json to pass"
@@ -120,6 +121,7 @@ jobs:
             jq -r '.event_type' payload_compact.json
           else
             echo "ERROR: event_type key missing!"
+            exit 1
           fi
 
           # Check client_payload with error handling
@@ -138,9 +140,11 @@ jobs:
               echo " characters"
             else
               echo "ERROR: markdown key missing in client_payload!"
+              exit 1
             fi
           else
             echo "false (ERROR: client_payload section missing!)"
+            exit 1
           fi
 
           echo "File size check:"
@@ -151,6 +155,7 @@ jobs:
             echo "✓ JSON format is valid"
           else
             echo "✗ JSON format is INVALID!"
+            exit 1
           fi
 
           echo "============= AUTHENTICATION CHECK ============="
@@ -214,6 +219,7 @@ jobs:
             echo "::error::Curl command failed with exit code $CURL_EXIT_CODE"
             echo "Error output:"
             cat curl_error.txt
+            exit 1
           else
             # Process HTTP response as before
             echo "Request logs:"    
@@ -223,6 +229,7 @@ jobs:
               echo "::error::Failed to trigger workflow. HTTP Status: $HTTP_CODE"
               echo "curl response:"
               cat response.txt
+              exit 1
             fi
           fi
 
