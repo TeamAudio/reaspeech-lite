@@ -42,7 +42,7 @@ jobs:
           - name: LinuxCUDA
             os: ubuntu-22.04
             cuda: true
-            cuda-version: '12.8.0'
+            cuda-version: '12.4.0'
             extra-flags: -G Ninja -DGGML_CUDA=1
           - name: macOS
             os: macos-14
@@ -54,7 +54,7 @@ jobs:
           - name: WindowsCUDA
             os: windows-latest
             cuda: true
-            cuda-version: '12.8.0'
+            cuda-version: '12.4.0'
             extra-flags: -DGGML_CUDA=1 -DGGML_STATIC=1
 
     steps:
@@ -75,7 +75,7 @@ jobs:
       # Set up cuda-toolkit for CUDA targets
       - name: Set up CUDA
         if: ${{ matrix.cuda == true }}
-        uses: Jimver/cuda-toolkit@v0.2.21
+        uses: Jimver/cuda-toolkit@v0.2.22
         with:
           cuda: ${{ matrix.cuda-version }}
 
@@ -183,6 +183,15 @@ jobs:
           echo "VST3_PATH=$ARTIFACTS_PATH/VST3/${{ env.PRODUCT_NAME }}.vst3" >> $GITHUB_ENV
           echo "MATRIX_NAME=${{ matrix.name }}" >> $GITHUB_ENV
           echo "ARTIFACT_NAME=${{ env.PRODUCT_NAME }}-${{ env.VERSION }}-${{ matrix.name }}" >> $GITHUB_ENV
+
+      - name: Copy CUBLAS DLL for Windows CUDA build
+        if: ${{ matrix.name == 'WindowsCUDA' }}
+        run: |
+          CUDA_BIN_DIR="$(dirname "$(which nvcc)")/"
+          CUBLAS_DLL="${CUDA_BIN_DIR}/cublas64_12.dll"
+          echo "Copying ${CUBLAS_DLL} to ${{ env.VST3_PATH }}/Contents/x86_64-win"
+          cp "${CUBLAS_DLL}" "${{ env.VST3_PATH }}/Contents/x86_64-win/"
+          echo "CUDA DLL copied successfully"
 
       - name: Pluginval
         if: ${{ matrix.name != 'WindowsCUDA' && matrix.name != 'LinuxCUDA' }}
