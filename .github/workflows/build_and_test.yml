@@ -149,7 +149,7 @@ jobs:
         run: npm run build
 
       - name: Cache the build
-        uses: mozilla-actions/sccache-action@v0.0.7
+        uses: mozilla-actions/sccache-action@v0.0.9
 
       # - name: Import Certificates (macOS)
       #   uses: sudara/basic-macos-keychain-action@v1
