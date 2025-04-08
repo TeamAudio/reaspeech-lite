@@ -17,7 +17,7 @@ jobs:
           
           # save release notes to environment
           echo "RELEASE_NOTES<<EOF" >> "$GITHUB_ENV"
-          cat "${{ github.event.release.body }}" >> "$GITHUB_ENV"
+          echo "${{ github.event.release.body }}" >> "$GITHUB_ENV"
           echo "EOF" >> "$GITHUB_ENV"
       
       
