@@ -233,7 +233,7 @@ export default class App {
       }
       const progress = document.getElementById('progress');
       const progressBar = progress.querySelector('.progress-bar') as HTMLElement;
-      progress.ariaValueNow = status.progress;
+      progress.setAttribute('aria-valuenow', status.progress.toString());
       progressBar.style.width = status.progress + '%';
     });
   }
