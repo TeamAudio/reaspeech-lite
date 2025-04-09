@@ -5,6 +5,15 @@ on:
   release:
     types: [edited] # we currently manually set release to latest 
   workflow_dispatch: # add manual trigger
+    inputs:
+      release_name:
+        description: 'Test release name'
+        required: true
+        default: 'Test Release'
+      release_body:
+        description: 'Test release notes'
+        required: true
+        default: 'These are test release notes for manual triggering'
 
 jobs:
   publish-release-notes:
@@ -17,20 +26,21 @@ jobs:
 
       - name: Print release info
         run: |
-          echo "Release '${{ github.event.release.name }}' is now the latest release."
+          RELEASE_NAME="${{ github.event.release.name || github.event.inputs.release_name }}"
+          echo "Release '$RELEASE_NAME' is now the latest release."
           echo "Release URL: ${{ github.event.release.html_url }}"
 
       - name: Set RELEASE_NOTES environment variable
         run: |
-          
+          RELEASE_BODY="${{ github.event.release.body || github.event.inputs.release_body }}"
           # save release notes to environment
           echo "RELEASE_NOTES<<EOF" >> "$GITHUB_ENV"
-          echo "${{ github.event.release.body }}" >> "$GITHUB_ENV"
+          echo "$RELEASE_BODY" >> "$GITHUB_ENV"
           echo "EOF" >> "$GITHUB_ENV"
 
           # print release notes
           echo "Release notes:"
-          echo "${{ github.event.release.body }}"
+          echo "$RELEASE_BODY"
       
       
       - name: Create JSON payload
