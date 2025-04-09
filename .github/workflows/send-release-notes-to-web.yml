@@ -2,7 +2,8 @@ name: Publish GitHub Release Notes to website repo to create blog post
 
 on:
   release:
-    types: [published, edited]  
+    types: [published]  
+    workflow_dispatch:
 
 jobs:
   publish-release-notes:
