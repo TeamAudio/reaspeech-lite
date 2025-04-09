@@ -112,6 +112,14 @@ public:
         // Note: setting this to true causes 0 segments to be returned
         // params.detect_language = true;
 
+        params.progress_callback = [] (whisper_context*, whisper_state*, int progress, void* user_data)
+        {
+            auto* engine = static_cast<ASREngine*> (user_data);
+            engine->progress.store (progress);
+        };
+        params.progress_callback_user_data = this;
+        progress.store (0);
+
         if (whisper_full (ctx, params, audioData.data(), static_cast<int> (audioData.size())) != 0)
         {
             DBG ("Transcription failed");
@@ -158,7 +166,13 @@ public:
             segments.push_back (segment);
         }
 
+        this->progress.store (100);
         return true;
+    }
+
+    int getProgress() const
+    {
+        return progress.load();
     }
 
 private:
@@ -166,4 +180,5 @@ private:
     std::string lastModelName;
     whisper_context* ctx = nullptr;
     std::unique_ptr<juce::URL::DownloadTask> downloadTask;
+    std::atomic<int> progress;
 };

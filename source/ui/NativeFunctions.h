@@ -178,6 +178,7 @@ public:
     void getTranscriptionStatus (const juce::var&, std::function<void (const juce::var&)> complete)
     {
         juce::String status;
+        int progress = 0;
         switch (asrStatus.load())
         {
             case ASRThreadPoolJobStatus::exporting:
@@ -188,13 +189,18 @@ public:
                 break;
             case ASRThreadPoolJobStatus::transcribing:
                 status = "Transcribing";
+                if (asrEngine != nullptr)
+                    progress = asrEngine->getProgress();
                 break;
             case ASRThreadPoolJobStatus::ready:
             case ASRThreadPoolJobStatus::finished:
             case ASRThreadPoolJobStatus::failed:
                 break;
         }
-        complete (juce::var (status));
+        juce::DynamicObject::Ptr result = new juce::DynamicObject();
+        result->setProperty ("status", status);
+        result->setProperty ("progress", progress);
+        complete (juce::var (result.get()));
     }
 
     void getWhisperLanguages (const juce::var&, std::function<void (const juce::var&)> complete)

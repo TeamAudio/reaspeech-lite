@@ -228,9 +228,13 @@ export default class App {
 
   updateTranscriptionStatus() {
     this.native.getTranscriptionStatus().then((status) => {
-      if (status !== '') {
-        this.setProcessText(status + '...');
+      if (status.status !== '') {
+        this.setProcessText(status.status + '...');
       }
+      const progress = document.getElementById('progress');
+      const progressBar = progress.querySelector('.progress-bar') as HTMLElement;
+      progress.ariaValueNow = status.progress;
+      progressBar.style.width = status.progress + '%';
     });
   }
 
