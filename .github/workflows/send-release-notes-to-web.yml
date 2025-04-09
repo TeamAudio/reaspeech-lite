@@ -1,17 +1,24 @@
 name: Publish GitHub Release Notes to website repo to create blog post
+# Trigger when a new release changes from pre-release to latest
 
 on:
   release:
-    types: [published]  
-    workflow_dispatch:
+    types: [edited] # we currently manually set release to latest 
+  workflow_dispatch: # add manual trigger
 
 jobs:
   publish-release-notes:
     runs-on: ubuntu-latest
+    if: ${{ github.event.release.prerelease == false }} 
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+
+      - name: Print release info
+        run: |
+          echo "Release '${{ github.event.release.name }}' is now the latest release."
+          echo "Release URL: ${{ github.event.release.html_url }}"
 
       - name: Set RELEASE_NOTES environment variable
         run: |
