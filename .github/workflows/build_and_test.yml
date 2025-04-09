@@ -55,7 +55,7 @@ jobs:
             os: windows-latest
             cuda: true
             cuda-version: '12.4.0'
-            extra-flags: -DGGML_CUDA=1 -DGGML_STATIC=1
+            extra-flags: -DGGML_CUDA=1 -DGGML_STATIC=1 -DCMAKE_CUDA_ARCHITECTURES="50;60;61;70;75;80"
 
     steps:
       - name: Maximize build space
