@@ -14,6 +14,6 @@ struct ASROptions
         obj->setProperty ("modelName", modelName);
         obj->setProperty ("language", language);
         obj->setProperty ("translate", translate);
-        return juce::JSON::toString (juce::var (obj));
+        return juce::JSON::toString (juce::var (obj.get()));
     }
 };

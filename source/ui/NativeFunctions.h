@@ -200,7 +200,7 @@ public:
         juce::DynamicObject::Ptr result = new juce::DynamicObject();
         result->setProperty ("status", status);
         result->setProperty ("progress", progress);
-        complete (juce::var (result));
+        complete (juce::var (result.get()));
     }
 
     void getWhisperLanguages (const juce::var&, std::function<void (const juce::var&)> complete)
@@ -309,7 +309,7 @@ public:
                         for (const auto& segment : result.segments)
                             segments.add (segment.toDynamicObject(false).get());
                         obj->setProperty ("segments", segments);
-                        complete (juce::var (obj));
+                        complete (juce::var (obj.get()));
                     }
                 }
             );
