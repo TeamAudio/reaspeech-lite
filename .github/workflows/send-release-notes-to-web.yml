@@ -27,6 +27,10 @@ jobs:
           echo "RELEASE_NOTES<<EOF" >> "$GITHUB_ENV"
           echo "${{ github.event.release.body }}" >> "$GITHUB_ENV"
           echo "EOF" >> "$GITHUB_ENV"
+
+          # print release notes
+          echo "Release notes:"
+          echo "${{ github.event.release.body }}"
       
       
       - name: Create JSON payload
