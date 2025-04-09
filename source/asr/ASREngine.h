@@ -112,10 +112,10 @@ public:
         // Note: setting this to true causes 0 segments to be returned
         // params.detect_language = true;
 
-        params.progress_callback = [] (whisper_context*, whisper_state*, int progress, void* user_data)
+        params.progress_callback = [] (whisper_context*, whisper_state*, int progressIn, void* user_data)
         {
             auto* engine = static_cast<ASREngine*> (user_data);
-            engine->progress.store (progress);
+            engine->progress.store (progressIn);
         };
         params.progress_callback_user_data = this;
         progress.store (0);
