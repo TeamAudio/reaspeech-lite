@@ -166,7 +166,7 @@ public:
             segments.push_back (segment);
         }
 
-        this->progress.store (100);
+        progress.store (100);
         return true;
     }
 
