@@ -213,6 +213,9 @@ derived from the
 Speech recognition is provided by the
 [whisper.cpp](https://github.com/ggml-org/whisper.cpp) project.
 
+GitHub workflow and build automation based on the
+[Pamplejuce](https://github.com/sudara/pamplejuce) project.
+
 ### Licensing
 
 ReaSpeech Lite is licensed under the terms of the
