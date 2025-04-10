@@ -60,7 +60,7 @@ Alternatively, you can [download the CUDA Toolkit](https://developer.nvidia.com/
 ## Usage
 
 To use the plugin in REAPER, add it to a track by clicking the "FX" button and
-selecting ReaSpeechLite. You can search for the plugin by name, or browse it
+selecting ReaSpeechLite. You can search for the plugin by name, or browse for it
 under the "VST3" section.
 
 > [!IMPORTANT]
@@ -75,20 +75,6 @@ Once the processing is complete, you should see a table of all the detected
 speech, and you can use this table to navigate the speech in your project.
 Clicking on a timestamp or line of speech text will automatically play from
 the position where this speech occurs.
-
-### Saving Transcripts
-
-The transcript will be saved along with your project. The next time you open
-the project, you should see the transcript.
-
-In addition, the transcript can be saved to the REAPER project in various ways
-by using the Create button. There are three options:
-
-* Markers: Create project markers
-* Regions: Create project regions
-* Notes: Create a track with notes items
-
-Once saved in this way, if desired, you can remove the plugin from the project.
 
 ### Options
 
@@ -105,7 +91,26 @@ Language:
 
 * Detect - Attempt to detect the language in the source audio
 * Specific language - Manually override the language
-* Translate - Translate the speech to English
+
+Translate:
+
+* Checked - Translate the speech to English
+* Unchecked - Leave the speech in its original language
+
+### Saving Transcripts
+
+The transcript will be saved along with your project. The next time you open
+the project, you should see the transcript when the plugin is visible.
+
+In addition, the transcript can be written to the REAPER project in various
+ways by using the Create button. There are three options:
+
+* Markers - Create project markers
+* Regions - Create project regions
+* Notes - Create a track with notes items
+
+Once written to the project in this way, you can remove the plugin
+from the project if you desire.
 
 ## Features
 
@@ -177,7 +182,8 @@ After a successful build, the VST3 plugin will be placed in the
 build/ReaSpeechLite_artefacts/Debug/VST3 directory. You can either add this
 directory to your VST paths in REAPER
 (Reaper > Options > Preferences > Plug-ins > VST), or you can copy it to your
-standard VST3 plugin location (C:\Program Files\Common Files\VST3 on Windows).
+standard VST3 plugin location (C:\Program Files\Common Files\VST3 on Windows,
+/Library/Audio/Plug-ins/VST3 on Mac).
 
 ### UI changes
 
