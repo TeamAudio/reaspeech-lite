@@ -13,6 +13,9 @@ containing text notes.
 
 ![Screenshot](docs/assets/img/reaspeech-lite-screenshot.png)
 
+> [!WARNING]
+> Please note that this plugin is experimental. Though we strive for reliability, it may crash (taking REAPER down with it) or otherwise cause issues opening your project. We strongly recommend that you back up your REAPER project files before adding this plugin.
+
 ## Installation
 
 ### Windows
@@ -55,9 +58,6 @@ Alternatively, you can [download the CUDA Toolkit](https://developer.nvidia.com/
 * Download the Linux or LinuxCUDA installer here: [Latest Release](https://github.com/TeamAudio/reaspeech-lite/releases/latest)
 
 ## Usage
-
-> [!WARNING]
-> Please note that this plugin is experimental. Though we strive for reliability, it may crash (taking REAPER down with it) or otherwise cause issues opening your project. We strongly recommend that you back up your REAPER project files before adding this plugin.
 
 To use the plugin in REAPER, add it to a track by clicking the "FX" button and
 selecting ReaSpeechLite. You can search for the plugin by name, or browse it
