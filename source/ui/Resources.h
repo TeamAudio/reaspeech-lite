@@ -18,6 +18,7 @@ struct Resources
             { "index.html", { BinaryData::index_html, BinaryData::index_htmlSize, "text/html" } },
             { "css/bootstrap.min.css", { BinaryData::bootstrap_min_css, BinaryData::bootstrap_min_cssSize, "text/css" } },
             { "css/bootstrap.min.css.map", { BinaryData::bootstrap_min_css_map, BinaryData::bootstrap_min_css_mapSize, "application/json" } },
+            { "img/reaspeech-lite-logo.png", { BinaryData::reaspeechlitelogo_png, BinaryData::reaspeechlitelogo_pngSize, "image/png" } },
             { "img/tech-audio-logo.png", { BinaryData::techaudiologo_png, BinaryData::techaudiologo_pngSize, "image/png" } },
             { "js/bootstrap.bundle.min.js", { BinaryData::bootstrap_bundle_min_js, BinaryData::bootstrap_bundle_min_jsSize, "application/javascript" } },
             { "js/bootstrap.bundle.min.js.map", { BinaryData::bootstrap_bundle_min_js_map, BinaryData::bootstrap_bundle_min_js_mapSize, "application/json" } },
