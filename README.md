@@ -1,5 +1,5 @@
 # ReaSpeech Lite
-![Build & Test](https://github.com/TeamAudio/reaspeech-lite/actions/workflows/build_and_test.yml/badge.svg)
+[![](https://github.com/TeamAudio/reaspeech-lite/actions/workflows/build_and_test.yml/badge.svg)](https://github.com/TeamAudio/reaspeech-lite/actions)
 
 ### Speech-to-text transcription for REAPER as a VST3/ARA plugin
 
