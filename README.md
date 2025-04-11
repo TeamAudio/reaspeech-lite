@@ -64,7 +64,7 @@ selecting ReaSpeechLite. You can search for the plugin by name, or browse for it
 under the "VST3" section.
 
 > [!IMPORTANT]
-> If you do not see ReaSpeechLite in the list of plugins, there may be an issue with the installation. Please make sure that ReaSpeechLite.vst3 can be found at one of REAPER's plugin paths, configurable at Reaper > Options > Preferences > Plug-ins > VST. If the plugin still does not show up, and you are trying to use the CUDA version, please ensure that you have installed CUDA Toolkit.
+> If you do not see ReaSpeechLite in the list of plugins, there may be an issue with the installation. Please make sure that ReaSpeechLite.vst3 can be found at one of REAPER's plugin paths, configurable at Reaper > Options > Preferences > Plug-ins > VST. If the plugin still does not show up, and you are trying to use the CUDA version, please ensure that you have installed the CUDA Toolkit and that your NVIDIA drivers are up to date.
 
 Once you have successfully added the plugin to a track, click the blue
 "Process" button, and ReaSpeech Lite will begin processing all of the source
