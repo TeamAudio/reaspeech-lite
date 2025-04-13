@@ -16,6 +16,37 @@ containing text notes.
 > [!WARNING]
 > Please note that this plugin is experimental. Though we strive for reliability, it may crash (taking REAPER down with it) or otherwise cause issues opening your project. We strongly recommend that you back up your REAPER project files before adding this plugin.
 
+## Features
+
+ReaSpeech Lite is a simple tool that aims to have a minimal but powerful
+feature set. The following features are currently available:
+
+### Transcription with whisper.cpp
+
+- Transcription using Small, Medium, Large, and Large v3 Turbo models
+- Automatic download of models
+- Language detection with manual override
+- Optional translation to English
+
+### Browsing results
+
+- Efficient results table that can scale to large transcripts
+- Searching, filtering, and sorting of results
+- Navigation and auto-play of project by clicking text links
+- Automatic adjustment of timestamps in response to media item edits (splitting, cropping, moving)
+- Display of colorized, graphical confidence scores to help determine the accuracy of the results
+
+### Persistence
+
+- Saves transcripts and other settings when project is saved
+- Creates markers, regions, and notes tracks in REAPER project
+
+### Compatibility
+
+- Compatible with Mac, Windows, and Linux
+- GPU acceleration available on all supported platforms
+- Built as a VST3 with ARA 2.0, enabling possible use outside of REAPER (e.g. Cubase)
+
 ## Installation
 
 ### Windows
@@ -111,37 +142,6 @@ ways by using the Create button. There are three options:
 
 Once written to the project in this way, you can remove the plugin
 from the project if you desire.
-
-## Features
-
-ReaSpeech Lite is a simple tool that aims to have a minimal but powerful
-feature set. The following features are currently available:
-
-### Transcription with whisper.cpp
-
-- Transcription using Small, Medium, Large, and Large v3 Turbo models
-- Automatic download of models
-- Language detection with manual override
-- Optional translation to English
-
-### Browsing results
-
-- Efficient results table that can scale to large transcripts
-- Searching, filtering, and sorting of results
-- Navigation and auto-play of project by clicking text links
-- Automatic adjustment of timestamps in response to media item edits (splitting, cropping, moving)
-- Display of colorized, graphical confidence scores to help determine the accuracy of the results
-
-### Persistence
-
-- Saves transcripts and other settings when project is saved
-- Creates markers, regions, and notes tracks in REAPER project
-
-### Compatibility
-
-- Compatible with Mac, Windows, and Linux
-- GPU acceleration available on all supported platforms
-- Built as a VST3 with ARA 2.0, enabling possible use outside of REAPER (e.g. Cubase)
 
 ## Development
 
