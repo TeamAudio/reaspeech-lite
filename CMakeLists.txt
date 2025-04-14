@@ -152,13 +152,13 @@ if(JS_FILE_INDEX EQUAL -1)
     message("Missing required file: ${REQUIRED_JS_FILE}, running 'npm run build' from 'source/ts' directory")
     execute_process(COMMAND npm run build
         WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/source/ts"
-        RESULT_VARIABLE BUILD_RESULT
-        OUTPUT_VARIABLE BUILD_OUTPUT
-        ERROR_VARIABLE BUILD_ERROR
+        RESULT_VARIABLE NPM_BUILD_RESULT
+        OUTPUT_VARIABLE NPM_BUILD_OUTPUT
+        ERROR_VARIABLE NPM_BUILD_ERROR
     )
-    message(STATUS "Build output: ${BUILD_OUTPUT}")
-    if(BUILD_RESULT)
-        message(FATAL_ERROR "Failed to build JS files: ${BUILD_ERROR}")
+    message(STATUS "Build output: ${NPM_BUILD_OUTPUT}")
+    if(NPM_BUILD_RESULT)
+        message(FATAL_ERROR "Failed to build JS files: ${NPM_BUILD_ERROR}")
     endif()
 endif()
 
