@@ -149,7 +149,17 @@ include(Assets)
 set(REQUIRED_JS_FILE "${CMAKE_CURRENT_SOURCE_DIR}/assets/js/main.js")
 list(FIND AssetFiles "${REQUIRED_JS_FILE}" JS_FILE_INDEX)
 if(JS_FILE_INDEX EQUAL -1)
-    message(FATAL_ERROR "Missing required file: ${REQUIRED_JS_FILE}\nPlease run 'npm run build' from the 'source/ts' directory before building.")
+    message("Missing required file: ${REQUIRED_JS_FILE}, running 'npm run build' from 'source/ts' directory")
+    execute_process(COMMAND npm run build
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/source/ts"
+        RESULT_VARIABLE NPM_BUILD_RESULT
+        OUTPUT_VARIABLE NPM_BUILD_OUTPUT
+        ERROR_VARIABLE NPM_BUILD_ERROR
+    )
+    message(STATUS "Build output: ${NPM_BUILD_OUTPUT}")
+    if(NPM_BUILD_RESULT)
+        message(FATAL_ERROR "Failed to build JS files: ${NPM_BUILD_ERROR}")
+    endif()
 endif()
 
 # MacOS only: Cleans up folder and target organization on Xcode.
