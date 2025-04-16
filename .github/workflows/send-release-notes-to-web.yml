@@ -50,12 +50,13 @@ jobs:
           REPO_NAME=$(echo "${{ github.repository }}" | cut -d'/' -f2)
             
           CURRENT_DATE=$(date +'%Y%m%d')
+          RELEASE_TAG="${{ github.event.release.tag_name || 'manual-test-tag' }}"
 
           # Construct proper repository_dispatch payload
           jq -n \
             --arg event_type "trigger-workflow" \
             --arg service "TeamAudio" \
-            --arg version "${{ github.event.release.tag_name }}" \
+            --arg version "$RELEASE_TAG" \
             --arg source_repo "$REPO_NAME" \
             --arg markdown "$RELEASE_NOTES" \
             --arg date "$CURRENT_DATE" \
