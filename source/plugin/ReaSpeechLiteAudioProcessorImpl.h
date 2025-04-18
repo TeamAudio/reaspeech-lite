@@ -90,11 +90,10 @@ public:
 
     juce::VST3ClientExtensions* getVST3ClientExtensions() override { return &vst3Extensions; }
 
-    PlayHeadState playHeadState;
-
     ReaperProxy reaperProxy;
     VST3Extensions vst3Extensions { reaperProxy };
 
+    PlayHeadState playHeadState;
     juce::ValueTree state { "state" };
 
 private:
