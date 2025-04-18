@@ -14,6 +14,7 @@ import {
   RowApiModule,
   RowSelectionModule,
   RowStyleModule,
+  ScrollApiModule,
   TextFilterModule,
   ValidationModule,
   colorSchemeDark,
@@ -27,6 +28,7 @@ ModuleRegistry.registerModules([
   RowApiModule,
   RowSelectionModule,
   RowStyleModule,
+  ScrollApiModule,
   TextFilterModule,
   ValidationModule,
 ]);
@@ -242,6 +244,7 @@ export default class TranscriptGrid {
       const node = this.gridApi.getRowNode(activeRow.id);
       if (node) {
         node.setSelected(true);
+        this.gridApi.ensureNodeVisible(node);
       }
     }
   }
