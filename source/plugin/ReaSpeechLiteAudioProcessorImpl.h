@@ -7,6 +7,7 @@
 
 #include "../reaper/ReaperProxy.h"
 #include "../reaper/VST3Extensions.h"
+#include "../types/PlayHeadState.h"
 
 class ReaSpeechLiteAudioProcessorImpl :
     public juce::AudioProcessor,
@@ -22,11 +23,13 @@ public:
 
     void prepareToPlay (double sampleRate, int samplesPerBlock) override
     {
+        playHeadState.update (juce::nullopt);
         prepareToPlayForARA (sampleRate, samplesPerBlock, getMainBusNumOutputChannels(), getProcessingPrecision());
     }
 
     void releaseResources() override
     {
+        playHeadState.update (juce::nullopt);
         releaseResourcesForARA();
     }
 
@@ -52,6 +55,7 @@ public:
         juce::ScopedNoDenormals noDenormals;
 
         auto* audioPlayHead = getPlayHead();
+        playHeadState.update (audioPlayHead->getPosition());
 
         if (! processBlockForARA (buffer, isRealtime(), audioPlayHead))
             processBlockBypassed (buffer, midiMessages);
@@ -85,6 +89,8 @@ public:
     }
 
     juce::VST3ClientExtensions* getVST3ClientExtensions() override { return &vst3Extensions; }
+
+    PlayHeadState playHeadState;
 
     ReaperProxy reaperProxy;
     VST3Extensions vst3Extensions { reaperProxy };

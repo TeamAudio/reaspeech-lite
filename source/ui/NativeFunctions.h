@@ -45,6 +45,7 @@ public:
             .withNativeFunction ("createMarkers", bindFn (&NativeFunctions::createMarkers))
             .withNativeFunction ("getAudioSources", bindFn (&NativeFunctions::getAudioSources))
             .withNativeFunction ("getModels", bindFn (&NativeFunctions::getModels))
+            .withNativeFunction ("getPlayHeadState", bindFn (&NativeFunctions::getPlayHeadState))
             .withNativeFunction ("getRegionSequences", bindFn (&NativeFunctions::getRegionSequences))
             .withNativeFunction ("getTranscriptionStatus", bindFn (&NativeFunctions::getTranscriptionStatus))
             .withNativeFunction ("getWhisperLanguages", bindFn (&NativeFunctions::getWhisperLanguages))
@@ -138,6 +139,12 @@ public:
             models.add (modelObj.get());
         }
         complete (juce::var (models));
+    }
+
+    void getPlayHeadState (const juce::var&, std::function<void (const juce::var&)> complete)
+    {
+        auto playHeadStateObj = audioProcessor.playHeadState.toDynamicObject();
+        complete (juce::var (playHeadStateObj.get()));
     }
 
     void getRegionSequences (const juce::var&, std::function<void (const juce::var&)> complete)

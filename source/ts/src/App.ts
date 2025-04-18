@@ -240,14 +240,14 @@ export default class App {
 
   updatePlaybackRegions() {
     this.native.getRegionSequences().then((regionSequences: RegionSequence[]) => {
-      this.updatePlaybackForRegionSequences(regionSequences);
-    });
-  }
+      const playbackRegionsByAudioSource =
+        this.collectPlaybackRegionsByAudioSource(regionSequences);
+      this.transcriptGrid.setPlaybackRegionMap(playbackRegionsByAudioSource);
 
-  updatePlaybackForRegionSequences(regionSequences: RegionSequence[]) {
-    const playbackRegionsByAudioSource =
-      this.collectPlaybackRegionsByAudioSource(regionSequences);
-    this.transcriptGrid.setPlaybackRegionMap(playbackRegionsByAudioSource);
+      this.native.getPlayHeadState().then((playHeadState) => {
+        this.transcriptGrid.setPlaybackPosition(playHeadState.timeInSeconds, playHeadState.isPlaying);
+      });
+    });
   }
 
   collectPlaybackRegionsByAudioSource(regionSequences: RegionSequence[]): Map<string, PlaybackRegion[]> {

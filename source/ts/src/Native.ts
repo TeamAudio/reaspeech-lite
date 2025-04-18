@@ -5,6 +5,7 @@ export default class Native {
   createMarkers = Juce.getNativeFunction("createMarkers");
   getAudioSources = Juce.getNativeFunction("getAudioSources");
   getModels = Juce.getNativeFunction("getModels");
+  getPlayHeadState = Juce.getNativeFunction("getPlayHeadState");
   getRegionSequences = Juce.getNativeFunction("getRegionSequences");
   getTranscriptionStatus = Juce.getNativeFunction("getTranscriptionStatus");
   getWhisperLanguages = Juce.getNativeFunction("getWhisperLanguages");
