@@ -9,6 +9,9 @@ export class MockNative {
   public createMarkers: jest.Mock;
   public getAudioSources: jest.Mock;
   public getModels: jest.Mock;
+  public getPlayHeadState: jest.Mock;
+  public getRegionSequences: jest.Mock;
+  public getTranscriptionStatus: jest.Mock;
   public getWhisperLanguages: jest.Mock;
   public play: jest.Mock;
   public setPlaybackPosition: jest.Mock;
@@ -25,6 +28,9 @@ export class MockNative {
     this.createMarkers = this.createMock('createMarkers');
     this.getAudioSources = this.createMock('getAudioSources');
     this.getModels = this.createMock('getModels');
+    this.getPlayHeadState = this.createMock('getPlayHeadState');
+    this.getRegionSequences = this.createMock('getRegionSequences');
+    this.getTranscriptionStatus = this.createMock('getTranscriptionStatus');
     this.getWhisperLanguages = this.createMock('getWhisperLanguages');
     this.play = this.createMock('play');
     this.setPlaybackPosition = this.createMock('setPlaybackPosition');
@@ -87,6 +93,9 @@ export class MockNative {
     this.createMarkers.mockReturnValue(Promise.resolve());
     this.getAudioSources.mockReturnValue(Promise.resolve([]));
     this.getModels.mockReturnValue(Promise.resolve([]));
+    this.getPlayHeadState.mockReturnValue(Promise.resolve({"timeInSeconds": 0, "isPlaying": false}));
+    this.getRegionSequences.mockReturnValue(Promise.resolve([]));
+    this.getTranscriptionStatus.mockReturnValue(Promise.resolve({"status": "", "progress": 0}));
     this.getWhisperLanguages.mockReturnValue(Promise.resolve([]));
     this.play.mockReturnValue(Promise.resolve());
     this.setPlaybackPosition.mockReturnValue(Promise.resolve());

@@ -222,12 +222,14 @@ export default class App {
   }
 
   update() {
-    this.updateTranscriptionStatus();
-    this.updatePlaybackRegions();
+    return Promise.all([
+      this.updateTranscriptionStatus(),
+      this.updatePlaybackRegions(),
+    ]);
   }
 
   updateTranscriptionStatus() {
-    this.native.getTranscriptionStatus().then((status) => {
+    return this.native.getTranscriptionStatus().then((status) => {
       if (status.status !== '') {
         this.setProcessText(status.status + '...');
       }
@@ -239,12 +241,12 @@ export default class App {
   }
 
   updatePlaybackRegions() {
-    this.native.getRegionSequences().then((regionSequences: RegionSequence[]) => {
+    return this.native.getRegionSequences().then((regionSequences: RegionSequence[]) => {
       const playbackRegionsByAudioSource =
         this.collectPlaybackRegionsByAudioSource(regionSequences);
       this.transcriptGrid.setPlaybackRegionMap(playbackRegionsByAudioSource);
 
-      this.native.getPlayHeadState().then((playHeadState) => {
+      return this.native.getPlayHeadState().then((playHeadState) => {
         this.transcriptGrid.setPlaybackPosition(playHeadState.timeInSeconds, playHeadState.isPlaying);
       });
     });

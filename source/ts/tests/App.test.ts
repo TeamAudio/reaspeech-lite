@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import App from '../src/App';
+import TranscriptGrid from '../src/TranscriptGrid';
 import fs from 'fs';
 import mockNative from './mocks/MockNative';
 import path from 'path';
@@ -250,6 +251,100 @@ describe('App', () => {
     expect(mockSaveState).toHaveBeenCalled();
 
     mockSaveState.mockRestore();
+  });
+
+  describe('update method', () => {
+    it('updates transcription status', async () => {
+      const app = new App();
+      const mockSetProcessText = jest.spyOn(app, 'setProcessText').mockImplementation(() => {});
+
+      mockNative.getTranscriptionStatus.mockResolvedValue({
+        status: 'Processing',
+        progress: 75
+      });
+
+      await app.updateTranscriptionStatus();
+
+      expect(mockNative.getTranscriptionStatus).toHaveBeenCalled();
+      expect(mockSetProcessText).toHaveBeenCalledWith('Processing...');
+
+      const progress = document.getElementById('progress');
+      const progressBar = progress.querySelector('.progress-bar') as HTMLElement;
+      expect(progress.getAttribute('aria-valuenow')).toBe('75');
+      expect(progressBar.style.width).toBe('75%');
+
+      mockSetProcessText.mockRestore();
+    });
+
+    it('does not update process text when status is empty', async () => {
+      const app = new App();
+      const mockSetProcessText = jest.spyOn(app, 'setProcessText').mockImplementation(() => {});
+
+      mockNative.getTranscriptionStatus.mockResolvedValue({
+        status: '',
+        progress: 0
+      });
+
+      await app.updateTranscriptionStatus();
+
+      expect(mockNative.getTranscriptionStatus).toHaveBeenCalled();
+      expect(mockSetProcessText).not.toHaveBeenCalled();
+
+      mockSetProcessText.mockRestore();
+    });
+
+    it('updates playback regions', async () => {
+      const app = new App();
+
+      app.transcriptGrid = {
+        setPlaybackRegionMap: jest.fn(),
+        setPlaybackPosition: jest.fn()
+      } as unknown as TranscriptGrid;
+
+      const mockRegionSequences = [
+        {
+          name: 'Track 1',
+          orderIndex: 0,
+          playbackRegions: [
+            {
+              playbackStart: 0,
+              playbackEnd: 1,
+              modificationStart: 0,
+              modificationEnd: 1,
+              audioSourcePersistentID: 'audio1'
+            }
+          ]
+        }
+      ];
+
+      mockNative.getRegionSequences.mockResolvedValue(mockRegionSequences);
+      mockNative.getPlayHeadState.mockResolvedValue({ timeInSeconds: 0.5, isPlaying: true });
+
+      await app.updatePlaybackRegions();
+
+      expect(mockNative.getRegionSequences).toHaveBeenCalled();
+      expect(mockNative.getPlayHeadState).toHaveBeenCalled();
+
+      expect(app.transcriptGrid.setPlaybackRegionMap).toHaveBeenCalled();
+      expect(app.transcriptGrid.setPlaybackPosition).toHaveBeenCalledWith(0.5, true);
+    });
+
+    it('integrates update method correctly', async () => {
+      const app = new App();
+
+      const mockUpdateTranscriptionStatus = jest.spyOn(app, 'updateTranscriptionStatus')
+        .mockImplementation(() => Promise.resolve());
+      const mockUpdatePlaybackRegions = jest.spyOn(app, 'updatePlaybackRegions')
+        .mockImplementation(() => Promise.resolve());
+
+      await app.update();
+
+      expect(mockUpdateTranscriptionStatus).toHaveBeenCalled();
+      expect(mockUpdatePlaybackRegions).toHaveBeenCalled();
+
+      mockUpdateTranscriptionStatus.mockRestore();
+      mockUpdatePlaybackRegions.mockRestore();
+    });
   });
 
   it('handles process button click', async () => {
