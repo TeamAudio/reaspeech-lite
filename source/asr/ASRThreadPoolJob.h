@@ -18,6 +18,7 @@ enum class ASRThreadPoolJobStatus
 {
     ready,
     exporting,
+    downloadingModel,
     loadingModel,
     transcribing,
     finished,
@@ -59,6 +60,16 @@ public:
         std::vector<float> audioData;
         ResamplingExporter::exportAudio (audioSource, WHISPER_SAMPLE_RATE, 0, audioData);
         DBG ("Audio data size: " + juce::String (audioData.size()));
+
+        DBG ("Downloading model");
+        onStatusCallback (ASRThreadPoolJobStatus::downloadingModel);
+
+        if (! asrEngine.downloadModel (options->modelName.toStdString()))
+        {
+            onStatusCallback (ASRThreadPoolJobStatus::failed);
+            onCompleteCallback ({ true, "Failed to download model", {} });
+            return jobHasFinished;
+        }
 
         DBG ("Loading model");
         onStatusCallback (ASRThreadPoolJobStatus::loadingModel);

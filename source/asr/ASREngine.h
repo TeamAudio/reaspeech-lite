@@ -29,6 +29,57 @@ public:
         downloadTask.reset();
     }
 
+    // Download the model if needed. Returns true if successful or already downloaded.
+    bool downloadModel (const std::string& modelName)
+    {
+        std::string modelPath = getModelPath (modelName);
+
+        if (juce::File (modelPath).exists())
+        {
+            DBG ("Model already downloaded: " + modelPath);
+            progress.store (100);
+            return true;
+        }
+
+        juce::File (modelsDir).createDirectory();
+        progress.store (0);
+
+        DBG ("Downloading model");
+        juce::URL url = Config::getModelURL (modelName);
+        auto file = juce::File (modelPath);
+
+        downloadTask = url.downloadToFile (file, juce::URL::DownloadTaskOptions());
+
+        while (downloadTask != nullptr && !downloadTask->isFinished())
+        {
+            auto totalLength = downloadTask->getTotalLength();
+            if (totalLength > 0)
+            {
+                auto downloadedLength = downloadTask->getLengthDownloaded();
+                progress.store (static_cast<int> ((downloadedLength * 100) / totalLength));
+            }
+            juce::Thread::sleep (100);
+        }
+
+        if (downloadTask == nullptr || downloadTask->hadError())
+        {
+            DBG ("Failed to download model");
+            downloadTask.reset();
+            progress.store (0);
+
+            if (juce::File (modelPath).deleteFile())
+            {
+                DBG ("Deleted model file");
+            }
+
+            return false;
+        }
+
+        downloadTask.reset();
+        progress.store (100);
+        return true;
+    }
+
     // Load the model by name. Returns true if successful.
     bool loadModel (const std::string& modelName)
     {
@@ -46,33 +97,13 @@ public:
             whisper_free (ctx);
         }
 
-        std::string modelPath = modelsDir + "ggml-" + modelName + ".bin";
+        std::string modelPath = getModelPath (modelName);
         DBG ("Loading model from: " + modelPath);
 
         if (! juce::File (modelPath).exists())
         {
-            juce::File (modelsDir).createDirectory();
-
-            DBG ("Downloading model");
-            juce::URL url = Config::getModelURL (modelName);
-            auto file = juce::File (modelPath);
-            downloadTask = url.downloadToFile (file, juce::URL::DownloadTaskOptions());
-
-            while (downloadTask != nullptr && ! downloadTask->isFinished())
-                juce::Thread::sleep (100);
-
-            if (downloadTask == nullptr || downloadTask->hadError())
-            {
-                DBG ("Failed to download model");
-                downloadTask.reset();
-
-                if (juce::File (modelPath).deleteFile())
-                    DBG ("Deleted model file");
-
-                return false;
-            }
-
-            downloadTask.reset();
+            DBG ("Model file not found: " + modelPath);
+            return false;
         }
 
         whisper_context_params params;
@@ -84,7 +115,9 @@ public:
             DBG ("Failed to load model");
 
             if (juce::File (modelPath).deleteFile())
+            {
                 DBG ("Deleted model file");
+            }
 
             return false;
         }
@@ -170,6 +203,13 @@ public:
         return true;
     }
 
+    // Get the full path to a model file based on its name
+    std::string getModelPath (const std::string& modelName) const
+    {
+        return modelsDir + "ggml-" + modelName + ".bin";
+    }
+
+    // Get current progress (0-100) of download or transcription
     int getProgress() const
     {
         return progress.load();
