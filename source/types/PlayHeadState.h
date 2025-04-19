@@ -13,38 +13,22 @@ struct PlayHeadState
 
         obj->setProperty ("isPlaying", isPlaying.load (std::memory_order_relaxed));
         obj->setProperty ("timeInSeconds", timeInSeconds.load (std::memory_order_relaxed));
-        obj->setProperty ("isLooping", isLooping.load (std::memory_order_relaxed));
-        obj->setProperty ("loopPpqStart", loopPpqStart.load (std::memory_order_relaxed));
-        obj->setProperty ("loopPpqEnd", loopPpqEnd.load (std::memory_order_relaxed));
 
         return obj;
     }
 
     void update (const juce::Optional<juce::AudioPlayHead::PositionInfo>& info)
     {
-        if (info.hasValue())
-        {
-            isPlaying.store (info->getIsPlaying(), std::memory_order_relaxed);
-            timeInSeconds.store (info->getTimeInSeconds().orFallback (0), std::memory_order_relaxed);
-            isLooping.store (info->getIsLooping(), std::memory_order_relaxed);
-            const auto loopPoints = info->getLoopPoints();
-
-            if (loopPoints.hasValue())
-            {
-                loopPpqStart = loopPoints->ppqStart;
-                loopPpqEnd = loopPoints->ppqEnd;
-            }
-        }
-        else
+        if (! info.hasValue())
         {
             isPlaying.store (false, std::memory_order_relaxed);
-            isLooping.store (false, std::memory_order_relaxed);
+            return;
         }
+
+        isPlaying.store (info->getIsPlaying(), std::memory_order_relaxed);
+        timeInSeconds.store (info->getTimeInSeconds().orFallback (0), std::memory_order_relaxed);
     }
 
-    std::atomic<bool> isPlaying { false },
-                      isLooping { false };
-    std::atomic<double> timeInSeconds { 0.0 },
-                        loopPpqStart  { 0.0 },
-                        loopPpqEnd    { 0.0 };
+    std::atomic<bool> isPlaying { false };
+    std::atomic<double> timeInSeconds { 0.0 };
 };
