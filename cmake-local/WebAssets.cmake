@@ -11,24 +11,41 @@ if(BUILD_WEB_ASSETS)
         message(FATAL_ERROR "npm not found but BUILD_WEB_ASSETS is ON")
     endif()
 
-    # Run npm commands at configure time to ensure main.js exists before the Assets glob
+    # Run npm install first
     if(WIN32)
         execute_process(
             COMMAND cmd /c ${NPM_EXECUTABLE} install
-            COMMAND cmd /c ${NPM_EXECUTABLE} run build
             WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/source/ts"
-            RESULT_VARIABLE NPM_RESULT
+            RESULT_VARIABLE NPM_INSTALL_RESULT
         )
     else()
         execute_process(
             COMMAND ${NPM_EXECUTABLE} install
-            COMMAND ${NPM_EXECUTABLE} run build
             WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/source/ts"
-            RESULT_VARIABLE NPM_RESULT
+            RESULT_VARIABLE NPM_INSTALL_RESULT
         )
     endif()
 
-    if(NOT NPM_RESULT EQUAL 0)
+    if(NOT NPM_INSTALL_RESULT EQUAL 0)
+        message(FATAL_ERROR "Failed to install npm dependencies")
+    endif()
+
+    # Then run npm build
+    if(WIN32)
+        execute_process(
+            COMMAND cmd /c ${NPM_EXECUTABLE} run build
+            WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/source/ts"
+            RESULT_VARIABLE NPM_BUILD_RESULT
+        )
+    else()
+        execute_process(
+            COMMAND ${NPM_EXECUTABLE} run build
+            WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/source/ts"
+            RESULT_VARIABLE NPM_BUILD_RESULT
+        )
+    endif()
+
+    if(NOT NPM_BUILD_RESULT EQUAL 0)
         message(FATAL_ERROR "Failed to build web assets")
     endif()
 endif()
@@ -39,13 +56,13 @@ include(Assets)
 if(BUILD_WEB_ASSETS)
     # Create rebuild target for subsequent builds
     if(WIN32)
-        add_custom_target(BuildWebAssets
+        add_custom_target(WebAssets
             COMMAND cmd /c ${NPM_EXECUTABLE} run build
             WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/source/ts"
             COMMENT "Building web assets..."
         )
     else()
-        add_custom_target(BuildWebAssets
+        add_custom_target(WebAssets
             COMMAND ${NPM_EXECUTABLE} run build
             WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/source/ts"
             COMMENT "Building web assets..."
@@ -53,7 +70,7 @@ if(BUILD_WEB_ASSETS)
     endif()
 
     # Make Assets depend on the rebuild target
-    add_dependencies(Assets BuildWebAssets)
+    add_dependencies(Assets WebAssets)
 else()
     # Check if main.js exists when not building
     list(FIND AssetFiles "${REQUIRED_JS_FILE}" JS_FILE_INDEX)
