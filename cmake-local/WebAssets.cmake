@@ -48,12 +48,7 @@ if(BUILD_WEB_ASSETS)
     if(NOT NPM_BUILD_RESULT EQUAL 0)
         message(FATAL_ERROR "Failed to build web assets")
     endif()
-endif()
 
-# Now include Assets after we've potentially created main.js
-include(Assets)
-
-if(BUILD_WEB_ASSETS)
     # Create rebuild target for subsequent builds
     if(WIN32)
         add_custom_target(WebAssets
@@ -68,13 +63,18 @@ if(BUILD_WEB_ASSETS)
             COMMENT "Building web assets..."
         )
     endif()
+endif()
 
+# Now include Assets after we've potentially created main.js
+include(Assets)
+
+# Check if main.js exists
+list(FIND AssetFiles "${REQUIRED_JS_FILE}" JS_FILE_INDEX)
+if(JS_FILE_INDEX EQUAL -1)
+    message(FATAL_ERROR "Missing required file: ${REQUIRED_JS_FILE}\nPlease run 'npm run build' from the 'source/ts' directory before building.")
+endif()
+
+if(BUILD_WEB_ASSETS)
     # Make Assets depend on the rebuild target
     add_dependencies(Assets WebAssets)
-else()
-    # Check if main.js exists when not building
-    list(FIND AssetFiles "${REQUIRED_JS_FILE}" JS_FILE_INDEX)
-    if(JS_FILE_INDEX EQUAL -1)
-        message(FATAL_ERROR "Missing required file: ${REQUIRED_JS_FILE}\nPlease run 'npm run build' from the 'source/ts' directory before building.")
-    endif()
 endif()
