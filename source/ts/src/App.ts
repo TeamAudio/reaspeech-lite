@@ -222,12 +222,14 @@ export default class App {
   }
 
   update() {
-    this.updateTranscriptionStatus();
-    this.updatePlaybackRegions();
+    return Promise.all([
+      this.updateTranscriptionStatus(),
+      this.updatePlaybackRegions(),
+    ]);
   }
 
   updateTranscriptionStatus() {
-    this.native.getTranscriptionStatus().then((status) => {
+    return this.native.getTranscriptionStatus().then((status) => {
       if (status.status !== '') {
         this.setProcessText(status.status + '...');
       }
@@ -239,15 +241,15 @@ export default class App {
   }
 
   updatePlaybackRegions() {
-    this.native.getRegionSequences().then((regionSequences: RegionSequence[]) => {
-      this.updatePlaybackForRegionSequences(regionSequences);
-    });
-  }
+    return this.native.getRegionSequences().then((regionSequences: RegionSequence[]) => {
+      const playbackRegionsByAudioSource =
+        this.collectPlaybackRegionsByAudioSource(regionSequences);
+      this.transcriptGrid.setPlaybackRegionMap(playbackRegionsByAudioSource);
 
-  updatePlaybackForRegionSequences(regionSequences: RegionSequence[]) {
-    const playbackRegionsByAudioSource =
-      this.collectPlaybackRegionsByAudioSource(regionSequences);
-    this.transcriptGrid.setPlaybackRegionMap(playbackRegionsByAudioSource);
+      return this.native.getPlayHeadState().then((playHeadState) => {
+        this.transcriptGrid.setPlaybackPosition(playHeadState.timeInSeconds, playHeadState.isPlaying);
+      });
+    });
   }
 
   collectPlaybackRegionsByAudioSource(regionSequences: RegionSequence[]): Map<string, PlaybackRegion[]> {

@@ -11,7 +11,10 @@ import {
   GridOptions,
   ICellRendererParams,
   ModuleRegistry,
+  RowApiModule,
+  RowSelectionModule,
   RowStyleModule,
+  ScrollApiModule,
   TextFilterModule,
   ValidationModule,
   colorSchemeDark,
@@ -22,7 +25,10 @@ import {
 ModuleRegistry.registerModules([
   ClientSideRowModelModule,
   ClientSideRowModelApiModule,
+  RowApiModule,
+  RowSelectionModule,
   RowStyleModule,
+  ScrollApiModule,
   TextFilterModule,
   ValidationModule,
 ]);
@@ -138,6 +144,8 @@ export default class TranscriptGrid {
       onCellClicked: this.handleCellClicked.bind(this),
       rowData: this.rowData,
       rowHeight: 32,
+      rowSelection: { mode: 'singleRow', checkboxes: false },
+      suppressCellFocus: true,
 
       theme: theme.withPart(colorSchemeDark).withParams({
         borderColor: '#4C545B',
@@ -214,6 +222,32 @@ export default class TranscriptGrid {
     { limit: 0.7, color: "#ffa700" },
     { limit: 0.0, color: "#ff2c2f" }
   ]);
+
+  setPlaybackPosition(position: number, isPlaying: boolean) {
+    // Deselect all first
+    this.gridApi.deselectAll();
+
+    // Don't select a row if not playing
+    if (!isPlaying) {
+      return;
+    }
+
+    // Find the row that contains the current playback time
+    const activeRow = this.rowData.find(row =>
+      row.playbackStart !== null &&
+      row.playbackEnd !== null &&
+      position >= row.playbackStart &&
+      position <= row.playbackEnd
+    );
+
+    if (activeRow) {
+      const node = this.gridApi.getRowNode(activeRow.id);
+      if (node) {
+        node.setSelected(true);
+        this.gridApi.ensureNodeVisible(node);
+      }
+    }
+  }
 
   setPlaybackRegionMap(playbackRegionsBySourceID: Map<string, PlaybackRegion[]>) {
     const updatedRows = this.rowData.map(row => {
