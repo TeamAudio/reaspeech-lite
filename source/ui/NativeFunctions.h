@@ -185,7 +185,7 @@ public:
                 status = "Exporting";
                 break;
             case ASRThreadPoolJobStatus::downloadingModel:
-                status = "Downloading Model";
+                status = "Downloading";
                 if (asrEngine != nullptr)
                     progress = asrEngine->getProgress();
                 break;
