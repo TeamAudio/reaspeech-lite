@@ -191,6 +191,11 @@ public:
             case ASRThreadPoolJobStatus::exporting:
                 status = "Exporting";
                 break;
+            case ASRThreadPoolJobStatus::downloadingModel:
+                status = "Downloading";
+                if (asrEngine != nullptr)
+                    progress = asrEngine->getProgress();
+                break;
             case ASRThreadPoolJobStatus::loadingModel:
                 status = "Loading Model";
                 break;
