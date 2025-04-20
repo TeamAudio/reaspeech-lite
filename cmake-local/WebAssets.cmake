@@ -1,9 +1,6 @@
 # Option to build web assets
 option(BUILD_WEB_ASSETS "Build web assets using npm" OFF)
 
-# Check for JS file or build it if BUILD_WEB_ASSETS is ON
-set(REQUIRED_JS_FILE "${CMAKE_CURRENT_SOURCE_DIR}/assets/js/main.js")
-
 if(BUILD_WEB_ASSETS)
     # Find npm executable
     find_program(NPM_EXECUTABLE npm)
@@ -69,6 +66,7 @@ endif()
 include(Assets)
 
 # Check if main.js exists
+set(REQUIRED_JS_FILE "${CMAKE_CURRENT_SOURCE_DIR}/assets/js/main.js")
 list(FIND AssetFiles "${REQUIRED_JS_FILE}" JS_FILE_INDEX)
 if(JS_FILE_INDEX EQUAL -1)
     message(FATAL_ERROR "Missing required file: ${REQUIRED_JS_FILE}\nPlease run 'npm run build' from the 'source/ts' directory before building.")
