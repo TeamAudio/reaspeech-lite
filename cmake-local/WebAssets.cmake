@@ -8,58 +8,40 @@ if(BUILD_WEB_ASSETS)
         message(FATAL_ERROR "npm not found but BUILD_WEB_ASSETS is ON")
     endif()
 
-    # Run npm install first
     if(WIN32)
-        execute_process(
-            COMMAND cmd /c ${NPM_EXECUTABLE} install
-            WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/source/ts"
-            RESULT_VARIABLE NPM_INSTALL_RESULT
-        )
+        set(OS_COMMAND_PREFIX cmd /c)
     else()
-        execute_process(
-            COMMAND ${NPM_EXECUTABLE} install
-            WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/source/ts"
-            RESULT_VARIABLE NPM_INSTALL_RESULT
-        )
+        set(OS_COMMAND_PREFIX "")
     endif()
+
+    # Run npm install first
+    execute_process(
+        COMMAND ${OS_COMMAND_PREFIX} ${NPM_EXECUTABLE} install
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/source/ts"
+        RESULT_VARIABLE NPM_INSTALL_RESULT
+    )
 
     if(NOT NPM_INSTALL_RESULT EQUAL 0)
         message(FATAL_ERROR "Failed to install npm dependencies")
     endif()
 
     # Then run npm build
-    if(WIN32)
-        execute_process(
-            COMMAND cmd /c ${NPM_EXECUTABLE} run build
-            WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/source/ts"
-            RESULT_VARIABLE NPM_BUILD_RESULT
-        )
-    else()
-        execute_process(
-            COMMAND ${NPM_EXECUTABLE} run build
-            WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/source/ts"
-            RESULT_VARIABLE NPM_BUILD_RESULT
-        )
-    endif()
+    execute_process(
+        COMMAND ${OS_COMMAND_PREFIX} ${NPM_EXECUTABLE} run build
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/source/ts"
+        RESULT_VARIABLE NPM_BUILD_RESULT
+    )
 
     if(NOT NPM_BUILD_RESULT EQUAL 0)
         message(FATAL_ERROR "Failed to build web assets")
     endif()
 
     # Create rebuild target for subsequent builds
-    if(WIN32)
-        add_custom_target(WebAssets
-            COMMAND cmd /c ${NPM_EXECUTABLE} run build
-            WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/source/ts"
-            COMMENT "Building web assets..."
-        )
-    else()
-        add_custom_target(WebAssets
-            COMMAND ${NPM_EXECUTABLE} run build
-            WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/source/ts"
-            COMMENT "Building web assets..."
-        )
-    endif()
+    add_custom_target(WebAssets
+        COMMAND ${OS_COMMAND_PREFIX} ${NPM_EXECUTABLE} run build
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/source/ts"
+        COMMENT "Building web assets..."
+    )
 endif()
 
 # Now include Assets after we've potentially created main.js
