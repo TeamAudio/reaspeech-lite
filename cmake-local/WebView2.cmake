@@ -1,0 +1,17 @@
+# Add WebView2 for Windows
+if(WIN32)
+    find_program(NUGET_EXE NAMES nuget)
+    if(NOT NUGET_EXE)
+        message("NUGET.EXE not found. Attempting to download...")
+        file(DOWNLOAD "https://dist.nuget.org/win-x86-commandline/latest/nuget.exe" "${CMAKE_BINARY_DIR}/nuget.exe" SHOW_PROGRESS)
+        set(NUGET_EXE "${CMAKE_BINARY_DIR}/nuget.exe")
+        if(NOT EXISTS "${NUGET_EXE}")
+            message(FATAL_ERROR "Failed to download nuget.exe")
+        endif()
+        message("Downloaded nuget.exe to ${NUGET_EXE}")
+    endif()
+
+    execute_process(COMMAND ${NUGET_EXE} install "Microsoft.Web.WebView2" -Version 1.0.1901.177 -OutputDirectory ${CMAKE_BINARY_DIR}/packages)
+    set(WebView2_DIR ${CMAKE_BINARY_DIR}/packages/Microsoft.Web.WebView2)
+    set(JUCE_WEBVIEW2_PACKAGE_LOCATION "${CMAKE_BINARY_DIR}/packages")
+endif()
