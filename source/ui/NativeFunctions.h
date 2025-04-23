@@ -41,6 +41,7 @@ public:
         };
 
         return initialOptions
+            .withNativeFunction ("abortTranscription", bindFn (&NativeFunctions::abortTranscription))
             .withNativeFunction ("canCreateMarkers", bindFn (&NativeFunctions::canCreateMarkers))
             .withNativeFunction ("createMarkers", bindFn (&NativeFunctions::createMarkers))
             .withNativeFunction ("getAudioSources", bindFn (&NativeFunctions::getAudioSources))
@@ -54,6 +55,12 @@ public:
             .withNativeFunction ("setPlaybackPosition", bindFn (&NativeFunctions::setPlaybackPosition))
             .withNativeFunction ("setWebState", bindFn (&NativeFunctions::setWebState))
             .withNativeFunction ("transcribeAudioSource", bindFn (&NativeFunctions::transcribeAudioSource));
+    }
+
+    void abortTranscription (const juce::var&, std::function<void (const juce::var&)> complete)
+    {
+        bool success = threadPool.removeAllJobs (true, 5000);
+        complete (juce::var (success));
     }
 
     void canCreateMarkers (const juce::var&, std::function<void (const juce::var&)> complete)
@@ -205,6 +212,7 @@ public:
                     progress = asrEngine->getProgress();
                 break;
             case ASRThreadPoolJobStatus::ready:
+            case ASRThreadPoolJobStatus::aborted:
             case ASRThreadPoolJobStatus::finished:
             case ASRThreadPoolJobStatus::failed:
                 break;

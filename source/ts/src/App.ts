@@ -16,6 +16,7 @@ declare global {
 
 export default class App {
   private native: Native;
+  private processing: boolean = false;
   public transcriptGrid: TranscriptGrid;
   public state: any;
 
@@ -46,7 +47,29 @@ export default class App {
   }
 
   initProcessButton() {
-    document.getElementById('process-button').onclick = () => { this.handleProcess(); };
+    document.getElementById('process-button').onclick = () => {
+      if (this.processing) {
+        this.handleCancel();
+      } else {
+        this.handleProcess();
+      }
+    };
+
+    document.getElementById('process-button').onmouseover = () => {
+      if (!this.processing) return;
+
+      document.getElementById('process-button').classList.add('btn-danger');
+      document.getElementById('process-button').classList.remove('btn-primary');
+      document.getElementById('process-cancel').style.display = 'inline-block';
+      document.getElementById('process-text').style.display = 'none';
+    };
+
+    document.getElementById('process-button').onmouseout = () => {
+      document.getElementById('process-button').classList.add('btn-primary');
+      document.getElementById('process-button').classList.remove('btn-danger');
+      document.getElementById('process-cancel').style.display = 'none';
+      document.getElementById('process-text').style.display = 'inline-block';
+    };
   }
 
   initCreateButton() {
@@ -151,7 +174,7 @@ export default class App {
   }
 
   handleProcess() {
-    this.disableProcessButton();
+    this.processing = true
     this.showSpinner();
     this.setProcessText('Processing...');
     this.clearTranscript();
@@ -169,7 +192,7 @@ export default class App {
     return this.native.getAudioSources().then((audioSources: AudioSource[]) => {
       const processNextAudioSource = () => {
         if (audioSources.length === 0) {
-          this.enableProcessButton();
+          this.processing = false;
           this.hideSpinner();
           this.setProcessText('Process');
           return this.saveState();
@@ -178,7 +201,7 @@ export default class App {
         const audioSource = audioSources.shift();
 
         return this.native.transcribeAudioSource(audioSource.persistentID, asrOptions).then((result) => {
-          if (result.segments && result.segments.length > 0) {
+          if (this.processing && result.segments && result.segments.length > 0) {
             this.showTranscript();
             this.transcriptGrid.addSegments(result.segments, audioSource);
             this.state.transcript = this.state.transcript || { groups: [] };
@@ -193,6 +216,17 @@ export default class App {
       };
 
       return processNextAudioSource();
+    });
+  }
+
+  handleCancel() {
+    this.processing = false;
+    this.setProcessText('Process');
+    this.hideSpinner();
+    this.hideTranscript();
+
+    return this.native.abortTranscription().then(() => {
+      return this.clearTranscript();
     });
   }
 
@@ -264,14 +298,6 @@ export default class App {
       }
     }
     return result;
-  }
-
-  enableProcessButton() {
-    (document.getElementById('process-button') as HTMLButtonElement).disabled = false;
-  }
-
-  disableProcessButton() {
-    (document.getElementById('process-button') as HTMLButtonElement).disabled = true;
   }
 
   setProcessText(text) {
