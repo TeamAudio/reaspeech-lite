@@ -57,18 +57,11 @@ export default class App {
 
     document.getElementById('process-button').onmouseover = () => {
       if (!this.processing) return;
-
-      document.getElementById('process-button').classList.add('btn-danger');
-      document.getElementById('process-button').classList.remove('btn-primary');
-      document.getElementById('process-cancel').style.display = 'inline-block';
-      document.getElementById('process-text').style.display = 'none';
+      this.showCancel();
     };
 
     document.getElementById('process-button').onmouseout = () => {
-      document.getElementById('process-button').classList.add('btn-primary');
-      document.getElementById('process-button').classList.remove('btn-danger');
-      document.getElementById('process-cancel').style.display = 'none';
-      document.getElementById('process-text').style.display = 'inline-block';
+      this.hideCancel();
     };
   }
 
@@ -193,8 +186,9 @@ export default class App {
       const processNextAudioSource = () => {
         if (audioSources.length === 0) {
           this.processing = false;
-          this.hideSpinner();
           this.setProcessText('Process');
+          this.hideCancel();
+          this.hideSpinner();
           return this.saveState();
         }
 
@@ -226,6 +220,7 @@ export default class App {
   handleCancel() {
     this.processing = false;
     this.setProcessText('Process');
+    this.hideCancel();
     this.hideSpinner();
     this.hideTranscript();
 
@@ -306,6 +301,20 @@ export default class App {
 
   setProcessText(text) {
     document.getElementById('process-text').innerText = text;
+  }
+
+  showCancel() {
+    document.getElementById('process-button').classList.add('btn-danger');
+    document.getElementById('process-button').classList.remove('btn-primary');
+    document.getElementById('process-cancel').style.display = 'inline-block';
+    document.getElementById('process-text').style.display = 'none';
+  }
+
+  hideCancel() {
+    document.getElementById('process-button').classList.add('btn-primary');
+    document.getElementById('process-button').classList.remove('btn-danger');
+    document.getElementById('process-cancel').style.display = 'none';
+    document.getElementById('process-text').style.display = 'inline-block';
   }
 
   showSpinner() {
