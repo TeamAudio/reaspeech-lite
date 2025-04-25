@@ -30,7 +30,7 @@ public:
     }
 
     // Download the model if needed. Returns true if successful or already downloaded.
-    bool downloadModel (const std::string& modelName)
+    bool downloadModel (const std::string& modelName, std::function<bool ()> isAborted)
     {
         std::string modelPath = getModelPath (modelName);
 
@@ -52,12 +52,27 @@ public:
 
         while (downloadTask != nullptr && !downloadTask->isFinished())
         {
+            if (isAborted())
+            {
+                DBG ("Download aborted");
+                downloadTask.reset();
+                progress.store (0);
+
+                if (juce::File (modelPath).deleteFile())
+                {
+                    DBG ("Deleted model file");
+                }
+
+                return false;
+            }
+
             auto totalLength = downloadTask->getTotalLength();
             if (totalLength > 0)
             {
                 auto downloadedLength = downloadTask->getLengthDownloaded();
                 progress.store (static_cast<int> ((downloadedLength * 100) / totalLength));
             }
+
             juce::Thread::sleep (100);
         }
 

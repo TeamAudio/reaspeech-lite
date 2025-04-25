@@ -68,7 +68,7 @@ public:
         DBG ("Downloading model");
         onStatusCallback (ASRThreadPoolJobStatus::downloadingModel);
 
-        if (! asrEngine.downloadModel (options->modelName.toStdString()))
+        if (! asrEngine.downloadModel (options->modelName.toStdString(), [this] { return shouldExit(); }))
         {
             onStatusCallback (ASRThreadPoolJobStatus::failed);
             onCompleteCallback ({ true, "Failed to download model", {} });
