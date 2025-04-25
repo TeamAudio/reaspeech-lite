@@ -201,7 +201,11 @@ export default class App {
         const audioSource = audioSources.shift();
 
         return this.native.transcribeAudioSource(audioSource.persistentID, asrOptions).then((result) => {
-          if (this.processing && result.segments && result.segments.length > 0) {
+          if (!this.processing) {
+            return Promise.resolve();
+          }
+
+          if (result.segments && result.segments.length > 0) {
             this.showTranscript();
             this.transcriptGrid.addSegments(result.segments, audioSource);
             this.state.transcript = this.state.transcript || { groups: [] };
