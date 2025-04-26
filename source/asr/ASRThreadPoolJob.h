@@ -55,27 +55,30 @@ public:
     {
         DBG ("ASRThreadPoolJob::runJob");
 
+        auto isAborted = [this] { return shouldExit(); };
+
         DBG ("Exporting audio data");
         onStatusCallback (ASRThreadPoolJobStatus::exporting);
 
         std::vector<float> audioData;
-        ResamplingExporter::exportAudio (audioSource, WHISPER_SAMPLE_RATE, 0, audioData);
-        DBG ("Audio data size: " + juce::String (audioData.size()));
+        ResamplingExporter::exportAudio (audioSource, WHISPER_SAMPLE_RATE, 0, audioData, isAborted);
 
-        if (aborted())
+        if (aborting())
             return jobHasFinished;
+
+        DBG ("Audio data size: " + juce::String (audioData.size()));
 
         DBG ("Downloading model");
         onStatusCallback (ASRThreadPoolJobStatus::downloadingModel);
 
-        if (! asrEngine.downloadModel (options->modelName.toStdString(), [this] { return shouldExit(); }))
+        if (! asrEngine.downloadModel (options->modelName.toStdString(), isAborted))
         {
             onStatusCallback (ASRThreadPoolJobStatus::failed);
             onCompleteCallback ({ true, "Failed to download model", {} });
             return jobHasFinished;
         }
 
-        if (aborted())
+        if (aborting())
             return jobHasFinished;
 
         DBG ("Loading model");
@@ -88,7 +91,7 @@ public:
             return jobHasFinished;
         }
 
-        if (aborted())
+        if (aborting())
             return jobHasFinished;
 
         DBG ("Transcribing audio data");
@@ -97,9 +100,9 @@ public:
         DBG ("ASR options: " + options->toJSON());
 
         std::vector<ASRSegment> segments;
-        bool result = asrEngine.transcribe (audioData, *options, segments, [this] { return shouldExit(); });
+        bool result = asrEngine.transcribe (audioData, *options, segments, isAborted);
 
-        if (aborted())
+        if (aborting())
             return jobHasFinished;
 
         if (result)
@@ -124,7 +127,7 @@ public:
     }
 
 private:
-    bool aborted() const
+    bool aborting() const
     {
         if (shouldExit())
         {
