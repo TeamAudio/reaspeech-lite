@@ -30,6 +30,9 @@ public:
         asrEngine = std::make_unique<ASREngine> (Config::getModelsDir());
     }
 
+    // Timeout in milliseconds for aborting transcription jobs
+    static constexpr int abortTimeout = 60000;
+
     juce::WebBrowserComponent::Options buildOptions (const juce::WebBrowserComponent::Options& initialOptions)
     {
         auto bindFn = [this] (auto memberFn)
@@ -59,7 +62,7 @@ public:
 
     void abortTranscription (const juce::var&, std::function<void (const juce::var&)> complete)
     {
-        bool success = threadPool.removeAllJobs (true, 5000);
+        bool success = threadPool.removeAllJobs (true, abortTimeout);
         complete (juce::var (success));
     }
 
