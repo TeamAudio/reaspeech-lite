@@ -219,12 +219,17 @@ export default class App {
 
   handleCancel() {
     this.processing = false;
-    this.setProcessText('Process');
     this.hideCancel();
     this.hideSpinner();
     this.hideTranscript();
 
+    this.disableProcessButton();
+    this.setProcessText('Canceling...');
+
     return this.native.abortTranscription().then(() => {
+      this.enableProcessButton();
+      this.setProcessText('Process');
+
       return this.clearTranscript();
     });
   }
@@ -301,6 +306,14 @@ export default class App {
 
   setProcessText(text) {
     document.getElementById('process-text').innerText = text;
+  }
+
+  enableProcessButton() {
+    (document.getElementById('process-button') as HTMLButtonElement).disabled = false;
+  }
+
+  disableProcessButton() {
+    (document.getElementById('process-button') as HTMLButtonElement).disabled = true;
   }
 
   showCancel() {
