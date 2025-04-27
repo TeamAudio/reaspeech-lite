@@ -1,16 +1,19 @@
 import { AudioSource, PlaybackRegion } from './ARA';
 import { Segment } from './ASR';
-import { htmlEscape, timestampToString } from './Utils';
+import { downloadFile, htmlEscape, timestampToString, timestampToStringSRT } from './Utils';
 
 import {
   CellClickedEvent,
   ClientSideRowModelApiModule,
   ClientSideRowModelModule,
   ColDef,
+  CsvExportModule,
+  CsvExportParams,
   GridApi,
   GridOptions,
   ICellRendererParams,
   ModuleRegistry,
+  ProcessCellForExportParams,
   RowApiModule,
   RowSelectionModule,
   RowStyleModule,
@@ -25,6 +28,7 @@ import {
 ModuleRegistry.registerModules([
   ClientSideRowModelModule,
   ClientSideRowModelApiModule,
+  CsvExportModule,
   RowApiModule,
   RowSelectionModule,
   RowStyleModule,
@@ -77,6 +81,36 @@ export default class TranscriptGrid {
   clear() {
     this.gridApi.applyTransaction({ remove: this.rowData });
     this.rowData.length = 0;
+  }
+
+  exportCSV() {
+    const params: CsvExportParams = {
+      exportedRows: 'all',
+      processCellCallback: this.processCellForCSV.bind(this),
+    };
+    const csvContent = this.gridApi.getDataAsCsv(params);
+    downloadFile(csvContent, 'text/csv;charset=utf-8', 'transcript.csv');
+  }
+
+  exportSRT() {
+    const srtContent = this.rowData.map(this.processRowForSRT.bind(this)).join('\n');
+    downloadFile(srtContent, 'application/x-subrip', 'transcript.srt');
+  }
+
+  processCellForCSV(params: ProcessCellForExportParams): any {
+    if (params.column.getColId() === 'playbackStart' || params.column.getColId() === 'playbackEnd') {
+      return params.value !== null ? timestampToString(params.value) : '';
+    }
+    if (params.column.getColId() === 'score') {
+      return params.value !== null ? params.value.toFixed(2) : '';
+    }
+    return params.value;
+  }
+
+  processRowForSRT(row: TranscriptRow, index: number): string {
+    const start = timestampToStringSRT(row.playbackStart ?? 0);
+    const end = timestampToStringSRT(row.playbackEnd ?? 0);
+    return `${index + 1}\n${start} --> ${end}\n${row.text}\n`;
   }
 
   findPlayableRange(playbackRegions: PlaybackRegion[], segmentStart: number, segmentEnd: number) {

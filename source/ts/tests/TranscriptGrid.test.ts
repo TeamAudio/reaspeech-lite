@@ -347,4 +347,52 @@ describe('TranscriptGrid', () => {
     options.onCellClicked!(params);
     expect(onPlayAt).not.toHaveBeenCalled();
   });
+
+  it('processes cells for CSV export', () => {
+    // Test timestamp formatting
+    const timeParams = {
+      value: 10,
+      column: { getColId: () => 'playbackStart' },
+    } as any;
+    expect(grid.processCellForCSV(timeParams)).toBe('0:10.000');
+
+    // Test null values
+    timeParams.value = null;
+    expect(grid.processCellForCSV(timeParams)).toBe('');
+
+    // Test score formatting
+    const scoreParams = {
+      value: 0.756,
+      column: { getColId: () => 'score' },
+    } as any;
+    expect(grid.processCellForCSV(scoreParams)).toBe('0.76');
+
+    // Test null score
+    scoreParams.value = null;
+    expect(grid.processCellForCSV(scoreParams)).toBe('');
+
+    // Test other columns
+    const otherParams = {
+      value: 'test',
+      column: { getColId: () => 'text' },
+    } as any;
+    expect(grid.processCellForCSV(otherParams)).toBe('test');
+  });
+
+  it('processes rows for SRT export', () => {
+    const row = {
+      id: 'test123-0',
+      start: 10,
+      end: 20,
+      playbackStart: 10,
+      playbackEnd: 20,
+      text: 'Hello',
+      score: 0.95,
+      source: 'Test Audio',
+      sourceID: 'test123',
+    };
+    const index = 0;
+    const result = grid.processRowForSRT(row, index);
+    expect(result).toBe('1\n00:00:10,000 --> 00:00:20,000\nHello\n');
+  });
 });
