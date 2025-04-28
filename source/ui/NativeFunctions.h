@@ -31,7 +31,7 @@ public:
     }
 
     // Timeout in milliseconds for aborting transcription jobs
-    static constexpr int abortTimeout = 60000;
+    static constexpr int abortTimeout = 5000;
 
     juce::WebBrowserComponent::Options buildOptions (const juce::WebBrowserComponent::Options& initialOptions)
     {

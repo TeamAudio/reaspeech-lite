@@ -167,7 +167,7 @@ export default class App {
   }
 
   handleProcess() {
-    this.processing = true
+    this.processing = true;
     this.showSpinner();
     this.setProcessText('Processing...');
     this.clearTranscript();
@@ -226,7 +226,13 @@ export default class App {
     this.disableProcessButton();
     this.setProcessText('Canceling...');
 
-    return this.native.abortTranscription().then(() => {
+    return this.native.abortTranscription().then((success) => {
+      if (!success) {
+        console.warn('Timed out trying to abort transcription job! Retrying...');
+        setTimeout(() => { this.handleCancel(); }, 1000);
+        return Promise.resolve();
+      }
+
       this.enableProcessButton();
       this.setProcessText('Process');
 
@@ -267,6 +273,9 @@ export default class App {
   }
 
   updateTranscriptionStatus() {
+    if (!this.processing) {
+      return Promise.resolve();
+    }
     return this.native.getTranscriptionStatus().then((status) => {
       if (status.status !== '') {
         this.setProcessText(status.status + '...');
