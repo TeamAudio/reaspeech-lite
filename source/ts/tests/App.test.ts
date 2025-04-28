@@ -434,6 +434,43 @@ describe('App', () => {
     });
   });
 
+  describe('cancellation', () => {
+    it('handles cancel button click', async () => {
+      const app = new App();
+      app.processing = true;
+
+      (app as any).transcriptGrid = {
+        clear: jest.fn()
+      };
+
+      await app.handleCancel();
+
+      expect(app.processing).toBe(false);
+      expect(mockNative.abortTranscription).toHaveBeenCalled();
+      expect(app.transcriptGrid.clear).toHaveBeenCalled();
+    });
+
+    it('retries if transcription abort fails', async () => {
+      const app = new App();
+      app.processing = true;
+
+      (app as any).transcriptGrid = {
+        clear: jest.fn()
+      };
+
+      // First call returns false (failure), second call returns true (success)
+      mockNative.abortTranscription
+        .mockResolvedValueOnce(false)
+        .mockResolvedValueOnce(true);
+
+      await app.handleCancel();
+
+      expect(app.processing).toBe(false);
+      expect(mockNative.abortTranscription).toHaveBeenCalledTimes(2);
+      expect(app.transcriptGrid.clear).toHaveBeenCalled();
+    });
+  });
+
   describe('interaction with results', () => {
     it('collects playback regions by audio source', () => {
       const app = new App();

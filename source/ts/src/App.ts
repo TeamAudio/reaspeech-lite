@@ -1,7 +1,7 @@
 import Native from './Native';
 import TranscriptGrid from './TranscriptGrid';
 import { AudioSource, PlaybackRegion, RegionSequence } from './ARA';
-import { htmlEscape, timestampToString } from './Utils';
+import { delay, htmlEscape } from './Utils';
 
 declare global {
   interface Window {
@@ -229,8 +229,7 @@ export default class App {
     return this.native.abortTranscription().then((success) => {
       if (!success) {
         console.warn('Timed out trying to abort transcription job! Retrying...');
-        setTimeout(() => { this.handleCancel(); }, 1000);
-        return Promise.resolve();
+        return delay(1000).then(() => this.handleCancel());
       }
 
       this.enableProcessButton();

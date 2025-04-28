@@ -5,6 +5,7 @@ export class MockNative {
   private mockFunctions: Map<string, jest.Mock> = new Map();
 
   // Common native functions exposed as properties
+  public abortTranscription: jest.Mock;
   public canCreateMarkers: jest.Mock;
   public createMarkers: jest.Mock;
   public getAudioSources: jest.Mock;
@@ -24,6 +25,7 @@ export class MockNative {
     this.setupJuceNativeFunctionMock();
 
     // Initialize common mocks (without setting defaults yet)
+    this.abortTranscription = this.createMock('abortTranscription');
     this.canCreateMarkers = this.createMock('canCreateMarkers');
     this.createMarkers = this.createMock('createMarkers');
     this.getAudioSources = this.createMock('getAudioSources');
@@ -89,6 +91,7 @@ export class MockNative {
     });
 
     // Set default implementations for common mocks
+    this.abortTranscription.mockReturnValue(Promise.resolve(true));
     this.canCreateMarkers.mockReturnValue(Promise.resolve(true));
     this.createMarkers.mockReturnValue(Promise.resolve());
     this.getAudioSources.mockReturnValue(Promise.resolve([]));

@@ -1,4 +1,13 @@
 /**
+ * Delays execution for the specified number of milliseconds.
+ * @param ms The delay time in milliseconds.
+ * @returns A promise that resolves after the specified delay.
+ */
+export function delay(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
  * Escapes HTML special characters in a string.
  * @param str The string to escape.
  * @returns The escaped string.
