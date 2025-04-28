@@ -263,15 +263,20 @@ describe('App', () => {
         progress: 75
       });
 
+      app.processing = true;
       await app.updateTranscriptionStatus();
 
       expect(mockNative.getTranscriptionStatus).toHaveBeenCalled();
       expect(mockSetProcessText).toHaveBeenCalledWith('Processing...');
 
       const progress = document.getElementById('progress');
-      const progressBar = progress.querySelector('.progress-bar') as HTMLElement;
-      expect(progress.getAttribute('aria-valuenow')).toBe('75');
-      expect(progressBar.style.width).toBe('75%');
+      if (progress) {
+        const progressBar = progress.querySelector('.progress-bar') as HTMLElement;
+        expect(progress.getAttribute('aria-valuenow')).toBe('75');
+        expect(progressBar.style.width).toBe('75%');
+      } else {
+        throw new Error('Progress element not found');
+      }
 
       mockSetProcessText.mockRestore();
     });
@@ -285,6 +290,7 @@ describe('App', () => {
         progress: 0
       });
 
+      app.processing = true;
       await app.updateTranscriptionStatus();
 
       expect(mockNative.getTranscriptionStatus).toHaveBeenCalled();

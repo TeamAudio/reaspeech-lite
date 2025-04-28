@@ -16,9 +16,9 @@ declare global {
 
 export default class App {
   private native: Native;
-  private processing: boolean = false;
-  public transcriptGrid: TranscriptGrid;
+  public processing: boolean = false;
   public state: any;
+  public transcriptGrid: TranscriptGrid;
 
   constructor() {
     this.native = new Native();
