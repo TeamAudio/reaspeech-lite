@@ -10,6 +10,7 @@ describe('App', () => {
   let warnSpy: any;
 
   beforeEach(() => {
+    jest.useFakeTimers();
     mockNative.reset();
     warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
@@ -25,6 +26,7 @@ describe('App', () => {
   });
 
   afterEach(() => {
+    jest.useRealTimers();
     warnSpy.mockRestore();
   });
 
@@ -463,7 +465,14 @@ describe('App', () => {
         .mockResolvedValueOnce(false)
         .mockResolvedValueOnce(true);
 
-      await app.handleCancel();
+      // Start the cancel operation
+      const cancelPromise = app.handleCancel();
+
+      // Advance timers after each async operation
+      await jest.runAllTimersAsync();
+
+      // Wait for the cancel operation to complete
+      await cancelPromise;
 
       expect(app.processing).toBe(false);
       expect(mockNative.abortTranscription).toHaveBeenCalledTimes(2);
