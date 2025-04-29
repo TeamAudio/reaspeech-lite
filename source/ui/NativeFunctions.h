@@ -16,6 +16,7 @@
 #include "../plugin/ReaSpeechLiteAudioProcessorImpl.h"
 #include "../reaper/ReaperProxy.h"
 #include "../types/MarkerType.h"
+#include "../utils/AbortHandler.h"
 #include "../utils/SafeUTF8.h"
 
 class NativeFunctions : public OptionsBuilder<juce::WebBrowserComponent::Options>
@@ -62,8 +63,8 @@ public:
 
     void abortTranscription (const juce::var&, std::function<void (const juce::var&)> complete)
     {
-        bool success = threadPool.removeAllJobs (true, abortTimeout);
-        complete (juce::var (success));
+        threadPool.removeAllJobs (true, 0); // Non-blocking call to initiate job removal
+        new AbortHandler (threadPool, complete, abortTimeout);
     }
 
     void canCreateMarkers (const juce::var&, std::function<void (const juce::var&)> complete)
