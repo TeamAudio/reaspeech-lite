@@ -217,7 +217,7 @@ export default class App {
     });
   }
 
-  handleCancel() {
+  handleCancel(retriesLeft = 100) {
     this.processing = false;
     this.hideCancel();
     this.hideSpinner();
@@ -226,10 +226,14 @@ export default class App {
     this.disableProcessButton();
     this.setProcessText('Canceling...');
 
-    return this.native.abortTranscription().then((success) => {
+    return this.native.abortTranscription().then((success: boolean) => {
       if (!success) {
-        console.warn('Timed out trying to abort transcription job! Retrying...');
-        return delay(1000).then(() => this.handleCancel());
+        if (retriesLeft > 0) {
+          console.warn('Timed out trying to abort transcription job! Retrying...');
+          return delay(1000).then(() => this.handleCancel(retriesLeft - 1));
+        } else {
+          this.showAlert('warning', '<b>Warning:</b> Unable to cancel transcription!');
+        }
       }
 
       this.enableProcessButton();
