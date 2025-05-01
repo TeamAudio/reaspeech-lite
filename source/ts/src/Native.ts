@@ -1,6 +1,7 @@
 import * as Juce from "juce-framework-frontend";
 
 export default class Native {
+  abortTranscription = Juce.getNativeFunction("abortTranscription");
   canCreateMarkers = Juce.getNativeFunction("canCreateMarkers");
   createMarkers = Juce.getNativeFunction("createMarkers");
   getAudioSources = Juce.getNativeFunction("getAudioSources");

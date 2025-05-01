@@ -16,6 +16,7 @@
 #include "../plugin/ReaSpeechLiteAudioProcessorImpl.h"
 #include "../reaper/ReaperProxy.h"
 #include "../types/MarkerType.h"
+#include "../utils/AbortHandler.h"
 #include "../utils/SafeUTF8.h"
 
 class NativeFunctions : public OptionsBuilder<juce::WebBrowserComponent::Options>
@@ -30,6 +31,9 @@ public:
         asrEngine = std::make_unique<ASREngine> (Config::getModelsDir());
     }
 
+    // Timeout in milliseconds for aborting transcription jobs
+    static constexpr int abortTimeout = 5000;
+
     juce::WebBrowserComponent::Options buildOptions (const juce::WebBrowserComponent::Options& initialOptions)
     {
         auto bindFn = [this] (auto memberFn)
@@ -41,6 +45,7 @@ public:
         };
 
         return initialOptions
+            .withNativeFunction ("abortTranscription", bindFn (&NativeFunctions::abortTranscription))
             .withNativeFunction ("canCreateMarkers", bindFn (&NativeFunctions::canCreateMarkers))
             .withNativeFunction ("createMarkers", bindFn (&NativeFunctions::createMarkers))
             .withNativeFunction ("getAudioSources", bindFn (&NativeFunctions::getAudioSources))
@@ -54,6 +59,12 @@ public:
             .withNativeFunction ("setPlaybackPosition", bindFn (&NativeFunctions::setPlaybackPosition))
             .withNativeFunction ("setWebState", bindFn (&NativeFunctions::setWebState))
             .withNativeFunction ("transcribeAudioSource", bindFn (&NativeFunctions::transcribeAudioSource));
+    }
+
+    void abortTranscription (const juce::var&, std::function<void (const juce::var&)> complete)
+    {
+        threadPool.removeAllJobs (true, 0); // Non-blocking call to initiate job removal
+        new AbortHandler (threadPool, complete, abortTimeout);
     }
 
     void canCreateMarkers (const juce::var&, std::function<void (const juce::var&)> complete)
@@ -205,6 +216,7 @@ public:
                     progress = asrEngine->getProgress();
                 break;
             case ASRThreadPoolJobStatus::ready:
+            case ASRThreadPoolJobStatus::aborted:
             case ASRThreadPoolJobStatus::finished:
             case ASRThreadPoolJobStatus::failed:
                 break;

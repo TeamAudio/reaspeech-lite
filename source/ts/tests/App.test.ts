@@ -10,6 +10,7 @@ describe('App', () => {
   let warnSpy: any;
 
   beforeEach(() => {
+    jest.useFakeTimers();
     mockNative.reset();
     warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
@@ -25,6 +26,7 @@ describe('App', () => {
   });
 
   afterEach(() => {
+    jest.useRealTimers();
     warnSpy.mockRestore();
   });
 
@@ -269,15 +271,20 @@ describe('App', () => {
         progress: 75
       });
 
+      app.processing = true;
       await app.updateTranscriptionStatus();
 
       expect(mockNative.getTranscriptionStatus).toHaveBeenCalled();
       expect(mockSetProcessText).toHaveBeenCalledWith('Processing...');
 
       const progress = document.getElementById('progress');
-      const progressBar = progress.querySelector('.progress-bar') as HTMLElement;
-      expect(progress.getAttribute('aria-valuenow')).toBe('75');
-      expect(progressBar.style.width).toBe('75%');
+      if (progress) {
+        const progressBar = progress.querySelector('.progress-bar') as HTMLElement;
+        expect(progress.getAttribute('aria-valuenow')).toBe('75');
+        expect(progressBar.style.width).toBe('75%');
+      } else {
+        throw new Error('Progress element not found');
+      }
 
       mockSetProcessText.mockRestore();
     });
@@ -291,6 +298,7 @@ describe('App', () => {
         progress: 0
       });
 
+      app.processing = true;
       await app.updateTranscriptionStatus();
 
       expect(mockNative.getTranscriptionStatus).toHaveBeenCalled();
@@ -425,6 +433,50 @@ describe('App', () => {
 
       expect(app.transcriptGrid.clear).toHaveBeenCalled();
       expect(app.state.transcript).toBeNull();
+    });
+  });
+
+  describe('cancellation', () => {
+    it('handles cancel button click', async () => {
+      const app = new App();
+      app.processing = true;
+
+      (app as any).transcriptGrid = {
+        clear: jest.fn()
+      };
+
+      await app.handleCancel();
+
+      expect(app.processing).toBe(false);
+      expect(mockNative.abortTranscription).toHaveBeenCalled();
+      expect(app.transcriptGrid.clear).toHaveBeenCalled();
+    });
+
+    it('retries if transcription abort fails', async () => {
+      const app = new App();
+      app.processing = true;
+
+      (app as any).transcriptGrid = {
+        clear: jest.fn()
+      };
+
+      // First call returns false (failure), second call returns true (success)
+      mockNative.abortTranscription
+        .mockResolvedValueOnce(false)
+        .mockResolvedValueOnce(true);
+
+      // Start the cancel operation
+      const cancelPromise = app.handleCancel();
+
+      // Advance timers after each async operation
+      await jest.runAllTimersAsync();
+
+      // Wait for the cancel operation to complete
+      await cancelPromise;
+
+      expect(app.processing).toBe(false);
+      expect(mockNative.abortTranscription).toHaveBeenCalledTimes(2);
+      expect(app.transcriptGrid.clear).toHaveBeenCalled();
     });
   });
 

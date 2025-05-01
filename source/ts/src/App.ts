@@ -1,7 +1,7 @@
 import Native from './Native';
 import TranscriptGrid from './TranscriptGrid';
 import { AudioSource, PlaybackRegion, RegionSequence } from './ARA';
-import { htmlEscape, timestampToString } from './Utils';
+import { delay, htmlEscape } from './Utils';
 
 declare global {
   interface Window {
@@ -16,8 +16,9 @@ declare global {
 
 export default class App {
   private native: Native;
-  public transcriptGrid: TranscriptGrid;
+  public processing: boolean = false;
   public state: any;
+  public transcriptGrid: TranscriptGrid;
 
   constructor() {
     this.native = new Native();
@@ -46,7 +47,22 @@ export default class App {
   }
 
   initProcessButton() {
-    document.getElementById('process-button').onclick = () => { this.handleProcess(); };
+    document.getElementById('process-button').onclick = () => {
+      if (this.processing) {
+        this.handleCancel();
+      } else {
+        this.handleProcess();
+      }
+    };
+
+    document.getElementById('process-button').onmouseover = () => {
+      if (!this.processing) return;
+      this.showCancel();
+    };
+
+    document.getElementById('process-button').onmouseout = () => {
+      this.hideCancel();
+    };
   }
 
   initCreateButton() {
@@ -151,7 +167,7 @@ export default class App {
   }
 
   handleProcess() {
-    this.disableProcessButton();
+    this.processing = true;
     this.showSpinner();
     this.setProcessText('Processing...');
     this.clearTranscript();
@@ -169,15 +185,20 @@ export default class App {
     return this.native.getAudioSources().then((audioSources: AudioSource[]) => {
       const processNextAudioSource = () => {
         if (audioSources.length === 0) {
-          this.enableProcessButton();
-          this.hideSpinner();
+          this.processing = false;
           this.setProcessText('Process');
+          this.hideCancel();
+          this.hideSpinner();
           return this.saveState();
         }
 
         const audioSource = audioSources.shift();
 
         return this.native.transcribeAudioSource(audioSource.persistentID, asrOptions).then((result) => {
+          if (!this.processing) {
+            return Promise.resolve();
+          }
+
           if (result.segments && result.segments.length > 0) {
             this.showTranscript();
             this.transcriptGrid.addSegments(result.segments, audioSource);
@@ -193,6 +214,32 @@ export default class App {
       };
 
       return processNextAudioSource();
+    });
+  }
+
+  handleCancel(retriesLeft = 100) {
+    this.processing = false;
+    this.hideCancel();
+    this.hideSpinner();
+    this.hideTranscript();
+
+    this.disableProcessButton();
+    this.setProcessText('Canceling...');
+
+    return this.native.abortTranscription().then((success: boolean) => {
+      if (!success) {
+        if (retriesLeft > 0) {
+          console.warn('Timed out trying to abort transcription job! Retrying...');
+          return delay(1000).then(() => this.handleCancel(retriesLeft - 1));
+        } else {
+          this.showAlert('warning', '<b>Warning:</b> Unable to cancel transcription!');
+        }
+      }
+
+      this.enableProcessButton();
+      this.setProcessText('Process');
+
+      return this.clearTranscript();
     });
   }
 
@@ -229,6 +276,9 @@ export default class App {
   }
 
   updateTranscriptionStatus() {
+    if (!this.processing) {
+      return Promise.resolve();
+    }
     return this.native.getTranscriptionStatus().then((status) => {
       if (status.status !== '') {
         this.setProcessText(status.status + '...');
@@ -266,6 +316,10 @@ export default class App {
     return result;
   }
 
+  setProcessText(text) {
+    document.getElementById('process-text').innerText = text;
+  }
+
   enableProcessButton() {
     (document.getElementById('process-button') as HTMLButtonElement).disabled = false;
   }
@@ -274,8 +328,18 @@ export default class App {
     (document.getElementById('process-button') as HTMLButtonElement).disabled = true;
   }
 
-  setProcessText(text) {
-    document.getElementById('process-text').innerText = text;
+  showCancel() {
+    document.getElementById('process-button').classList.add('btn-danger');
+    document.getElementById('process-button').classList.remove('btn-primary');
+    document.getElementById('process-cancel').style.display = 'inline-block';
+    document.getElementById('process-text').style.display = 'none';
+  }
+
+  hideCancel() {
+    document.getElementById('process-button').classList.add('btn-primary');
+    document.getElementById('process-button').classList.remove('btn-danger');
+    document.getElementById('process-cancel').style.display = 'none';
+    document.getElementById('process-text').style.display = 'inline-block';
   }
 
   showSpinner() {

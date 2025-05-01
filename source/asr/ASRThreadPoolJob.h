@@ -21,6 +21,7 @@ enum class ASRThreadPoolJobStatus
     downloadingModel,
     loadingModel,
     transcribing,
+    aborted,
     finished,
     failed
 };
@@ -54,22 +55,31 @@ public:
     {
         DBG ("ASRThreadPoolJob::runJob");
 
+        auto isAborted = [this] { return shouldExit(); };
+
         DBG ("Exporting audio data");
         onStatusCallback (ASRThreadPoolJobStatus::exporting);
 
         std::vector<float> audioData;
-        ResamplingExporter::exportAudio (audioSource, WHISPER_SAMPLE_RATE, 0, audioData);
+        ResamplingExporter::exportAudio (audioSource, WHISPER_SAMPLE_RATE, 0, audioData, isAborted);
+
+        if (aborting())
+            return jobHasFinished;
+
         DBG ("Audio data size: " + juce::String (audioData.size()));
 
         DBG ("Downloading model");
         onStatusCallback (ASRThreadPoolJobStatus::downloadingModel);
 
-        if (! asrEngine.downloadModel (options->modelName.toStdString()))
+        if (! asrEngine.downloadModel (options->modelName.toStdString(), isAborted))
         {
             onStatusCallback (ASRThreadPoolJobStatus::failed);
             onCompleteCallback ({ true, "Failed to download model", {} });
             return jobHasFinished;
         }
+
+        if (aborting())
+            return jobHasFinished;
 
         DBG ("Loading model");
         onStatusCallback (ASRThreadPoolJobStatus::loadingModel);
@@ -81,13 +91,19 @@ public:
             return jobHasFinished;
         }
 
+        if (aborting())
+            return jobHasFinished;
+
         DBG ("Transcribing audio data");
         onStatusCallback (ASRThreadPoolJobStatus::transcribing);
 
         DBG ("ASR options: " + options->toJSON());
 
         std::vector<ASRSegment> segments;
-        bool result = asrEngine.transcribe (audioData, *options, segments);
+        bool result = asrEngine.transcribe (audioData, *options, segments, isAborted);
+
+        if (aborting())
+            return jobHasFinished;
 
         if (result)
         {
@@ -111,6 +127,18 @@ public:
     }
 
 private:
+    bool aborting() const
+    {
+        if (shouldExit())
+        {
+            DBG ("Transcription aborted");
+            onStatusCallback (ASRThreadPoolJobStatus::aborted);
+            onCompleteCallback ({ false, "", {} });
+            return true;
+        }
+        return false;
+    }
+
     ASREngine& asrEngine;
     juce::ARAAudioSource* audioSource;
     std::unique_ptr<ASROptions> options;

@@ -30,7 +30,7 @@ public:
     }
 
     // Download the model if needed. Returns true if successful or already downloaded.
-    bool downloadModel (const std::string& modelName)
+    bool downloadModel (const std::string& modelName, std::function<bool ()> isAborted)
     {
         std::string modelPath = getModelPath (modelName);
 
@@ -52,12 +52,27 @@ public:
 
         while (downloadTask != nullptr && !downloadTask->isFinished())
         {
+            if (isAborted())
+            {
+                DBG ("Download aborted");
+                downloadTask.reset();
+                progress.store (0);
+
+                if (juce::File (modelPath).deleteFile())
+                {
+                    DBG ("Deleted model file");
+                }
+
+                return false;
+            }
+
             auto totalLength = downloadTask->getTotalLength();
             if (totalLength > 0)
             {
                 auto downloadedLength = downloadTask->getLengthDownloaded();
                 progress.store (static_cast<int> ((downloadedLength * 100) / totalLength));
             }
+
             juce::Thread::sleep (100);
         }
 
@@ -128,7 +143,11 @@ public:
     }
 
     // Transcribe the audio data. Returns true if successful.
-    bool transcribe (const std::vector<float>& audioData, ASROptions& options, std::vector<ASRSegment>& segments)
+    bool transcribe (
+        const std::vector<float>& audioData,
+        ASROptions& options,
+        std::vector<ASRSegment>& segments,
+        std::function<bool ()> isAborted)
     {
         DBG ("ASREngine::transcribe");
         if (ctx == nullptr)
@@ -137,20 +156,26 @@ public:
             return false;
         }
 
+        TranscribeCallbackData callbackData { this, isAborted };
+
         whisper_full_params params = whisper_full_default_params (WHISPER_SAMPLING_GREEDY);
         params.token_timestamps = true;
         params.language = options.language.toStdString().c_str();
         params.translate = options.translate;
 
-        // Note: setting this to true causes 0 segments to be returned
-        // params.detect_language = true;
+        params.encoder_begin_callback = [] (whisper_context*, whisper_state*, void* user_data)
+        {
+            auto* data = static_cast<TranscribeCallbackData*> (user_data);
+            return ! data->isAborted();
+        };
+        params.encoder_begin_callback_user_data = &callbackData;
 
         params.progress_callback = [] (whisper_context*, whisper_state*, int progressIn, void* user_data)
         {
-            auto* engine = static_cast<ASREngine*> (user_data);
-            engine->progress.store (progressIn);
+            auto* data = static_cast<TranscribeCallbackData*> (user_data);
+            data->engine->progress.store (progressIn);
         };
-        params.progress_callback_user_data = this;
+        params.progress_callback_user_data = &callbackData;
         progress.store (0);
 
         if (whisper_full (ctx, params, audioData.data(), static_cast<int> (audioData.size())) != 0)
@@ -216,6 +241,12 @@ public:
     }
 
 private:
+    struct TranscribeCallbackData
+    {
+        ASREngine* engine;
+        std::function<bool()> isAborted;
+    };
+
     std::string modelsDir;
     std::string lastModelName;
     whisper_context* ctx = nullptr;

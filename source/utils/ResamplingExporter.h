@@ -22,8 +22,13 @@ struct ResamplingExporter
      * @param destSampleRate The sample rate to which the audio data should be resampled.
      * @param channel The channel index to read from the audio source.
      * @param buffer A vector to store the resampled audio data.
+     * @param isAborted Optional callback that returns true if the operation should be aborted.
      */
-    static void exportAudio (juce::ARAAudioSource* audioSource, ARA::ARASampleRate destSampleRate, int channel, std::vector<float>& buffer)
+    static void exportAudio (juce::ARAAudioSource* audioSource,
+        ARA::ARASampleRate destSampleRate,
+        int channel,
+        std::vector<float>& buffer,
+        std::function<bool()> isAborted = nullptr)
     {
         const auto sourceChannelCount = audioSource->getChannelCount();
         jassert (channel >= 0 && channel < sourceChannelCount);
@@ -58,6 +63,9 @@ struct ResamplingExporter
         int destSamplePos = 0;
         while (destSamplePos < destSampleCount)
         {
+            if (isAborted && isAborted())
+                return;
+
             resamplingSource->getNextAudioBlock(channelInfo);
 
             // Copy the resampled block to the destination buffer
