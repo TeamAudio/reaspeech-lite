@@ -192,6 +192,58 @@ describe('TranscriptGrid', () => {
     expect(grid.scoreColor(0)).toBe('transparent');
   });
 
+  it('should deselect all rows when not playing', () => {
+    grid['gridApi'].deselectAll = jest.fn();
+    grid.setPlaybackPosition(5, false);
+    expect(grid['gridApi'].deselectAll).toHaveBeenCalled();
+  });
+
+  it('should select and scroll to row containing playback position when playing', () => {
+    grid.addSegments([
+      { start: 0, end: 10, text: 'Segment 1', score: 0.9 },
+      { start: 10, end: 20, text: 'Segment 2', score: 0.8 },
+      { start: 20, end: 30, text: 'Segment 3', score: 0.7 }
+    ], makeAudioSource('Test Audio', 'test123'));
+
+    grid['gridApi'].getRowNode = jest.fn().mockReturnValue({
+      setSelected: jest.fn(),
+      isSelected: jest.fn().mockReturnValue(false)
+    }) as jest.Mock<any>;
+
+    grid['gridApi'].deselectAll = jest.fn();
+    grid['gridApi'].ensureNodeVisible = jest.fn();
+
+    grid.setPlaybackPosition(15, true);
+
+    expect(grid['gridApi'].getRowNode).toHaveBeenCalledWith('test123-1');
+    const node = grid['gridApi'].getRowNode('test123-1');
+    expect(node?.setSelected).toHaveBeenCalledWith(true);
+    expect(grid['gridApi'].deselectAll).toHaveBeenCalled();
+    expect(grid['gridApi'].ensureNodeVisible).toHaveBeenCalledWith(node);
+  });
+
+  it('should not change selection if position is outside any segment', () => {
+    grid.addSegments([
+      { start: 0, end: 10, text: 'Segment 1', score: 0.9 },
+      { start: 10, end: 20, text: 'Segment 2', score: 0.8 },
+      { start: 20, end: 30, text: 'Segment 3', score: 0.7 }
+    ], makeAudioSource('Test Audio', 'test123'));
+
+    grid['gridApi'].getRowNode = jest.fn().mockReturnValue({
+      setSelected: jest.fn(),
+      isSelected: jest.fn().mockReturnValue(false)
+    }) as jest.Mock<any>;
+
+    grid['gridApi'].deselectAll = jest.fn();
+    grid['gridApi'].ensureNodeVisible = jest.fn();
+
+    grid.setPlaybackPosition(35, true);
+
+    expect(grid['gridApi'].getRowNode).not.toHaveBeenCalled();
+    expect(grid['gridApi'].deselectAll).not.toHaveBeenCalled();
+    expect(grid['gridApi'].ensureNodeVisible).not.toHaveBeenCalled();
+  });
+
   it('should update rows with correct playback regions', () => {
     const playbackRegionsBySourceID = new Map<string, PlaybackRegion[]>();
     playbackRegionsBySourceID.set('test123', [
