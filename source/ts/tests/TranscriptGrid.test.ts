@@ -244,6 +244,30 @@ describe('TranscriptGrid', () => {
     expect(grid['gridApi'].ensureNodeVisible).not.toHaveBeenCalled();
   });
 
+  it('should not select row if already selected', () => {
+    grid.addSegments([
+      { start: 0, end: 10, text: 'Segment 1', score: 0.9 },
+      { start: 10, end: 20, text: 'Segment 2', score: 0.8 },
+      { start: 20, end: 30, text: 'Segment 3', score: 0.7 }
+    ], makeAudioSource('Test Audio', 'test123'));
+
+    grid['gridApi'].getRowNode = jest.fn().mockReturnValue({
+      setSelected: jest.fn(),
+      isSelected: jest.fn().mockReturnValue(true)
+    }) as jest.Mock<any>;
+
+    grid['gridApi'].deselectAll = jest.fn();
+    grid['gridApi'].ensureNodeVisible = jest.fn();
+
+    grid.setPlaybackPosition(15, true);
+
+    expect(grid['gridApi'].getRowNode).toHaveBeenCalledWith('test123-1');
+    const node = grid['gridApi'].getRowNode('test123-1');
+    expect(node?.setSelected).not.toHaveBeenCalled();
+    expect(grid['gridApi'].deselectAll).not.toHaveBeenCalled();
+    expect(grid['gridApi'].ensureNodeVisible).not.toHaveBeenCalled();
+  });
+
   it('should update rows with correct playback regions', () => {
     const playbackRegionsBySourceID = new Map<string, PlaybackRegion[]>();
     playbackRegionsBySourceID.set('test123', [
