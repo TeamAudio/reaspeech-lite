@@ -121,8 +121,7 @@ public:
             return false;
         }
 
-        whisper_context_params params;
-        params.use_gpu = true;
+        whisper_context_params params = whisper_context_default_params();
 
         ctx = whisper_init_from_file_with_params (modelPath.c_str(), params);
         if (ctx == nullptr)
