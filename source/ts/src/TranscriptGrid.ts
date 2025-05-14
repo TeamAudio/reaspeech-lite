@@ -83,18 +83,18 @@ export default class TranscriptGrid {
     this.rowData.length = 0;
   }
 
-  exportCSV() {
+  exportCSV(onDownloadFile = downloadFile) {
     const params: CsvExportParams = {
       exportedRows: 'all',
       processCellCallback: this.processCellForCSV.bind(this),
     };
     const csvContent = this.gridApi.getDataAsCsv(params);
-    downloadFile(csvContent, 'text/csv;charset=utf-8', 'transcript.csv');
+    onDownloadFile(csvContent, 'text/csv;charset=utf-8', 'transcript.csv');
   }
 
-  exportSRT() {
+  exportSRT(onDownloadFile = downloadFile) {
     const srtContent = this.rowData.map(this.processRowForSRT.bind(this)).join('\n');
-    downloadFile(srtContent, 'application/x-subrip', 'transcript.srt');
+    onDownloadFile(srtContent, 'application/x-subrip', 'transcript.srt');
   }
 
   processCellForCSV(params: ProcessCellForExportParams): any {
