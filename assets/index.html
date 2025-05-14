@@ -55,15 +55,27 @@
         <div class="d-flex justify-content-between align-items-center mb-2">
           <h4 class="mb-0">Transcript</h4>
 
-          <div id="create-menu" class="dropdown" style="display: none">
-            <button class="btn btn-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-              Create
-            </button>
-            <ul class="dropdown-menu">
-              <li><a id="create-markers" class="dropdown-item" href="javascript:">Markers</a></li>
-              <li><a id="create-regions" class="dropdown-item" href="javascript:">Regions</a></li>
-              <li><a id="create-notes" class="dropdown-item" href="javascript:">Notes</a></li>
-            </ul>
+          <div class="d-flex gap-2">
+            <div id="create-menu" class="dropdown" style="display: none">
+              <button class="btn btn-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                Create
+              </button>
+              <ul class="dropdown-menu">
+                <li><a id="create-markers" class="dropdown-item" href="javascript:">Markers</a></li>
+                <li><a id="create-regions" class="dropdown-item" href="javascript:">Regions</a></li>
+                <li><a id="create-notes" class="dropdown-item" href="javascript:">Notes</a></li>
+              </ul>
+            </div>
+
+            <div id="export-menu" class="dropdown">
+              <button class="btn btn-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                Export
+              </button>
+              <ul class="dropdown-menu">
+                <li><a id="export-csv" class="dropdown-item" href="javascript:">CSV</a></li>
+                <li><a id="export-srt" class="dropdown-item" href="javascript:">SRT</a></li>
+              </ul>
+            </div>
           </div>
         </div>
 

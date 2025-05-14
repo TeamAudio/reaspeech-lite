@@ -35,6 +35,7 @@ export default class App {
     this.initState();
     this.initProcessButton();
     this.initCreateButton();
+    this.initExportButton();
     this.startPolling();
   }
 
@@ -69,6 +70,11 @@ export default class App {
     document.getElementById('create-markers').onclick = () => { this.handleCreateMarkers('markers'); };
     document.getElementById('create-regions').onclick = () => { this.handleCreateMarkers('regions'); };
     document.getElementById('create-notes').onclick = () => { this.handleCreateMarkers('notes'); };
+  }
+
+  initExportButton() {
+    document.getElementById('export-csv').onclick = () => { this.transcriptGrid.exportCSV(); };
+    document.getElementById('export-srt').onclick = () => { this.transcriptGrid.exportSRT(); };
   }
 
   startPolling() {
