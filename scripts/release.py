@@ -39,6 +39,22 @@ def check_git_status():
         print("Error: Failed to check git status")
         return False
 
+def check_version_exists(version):
+    """Check if version tag already exists"""
+    tag = f"v{version}"
+    try:
+        result = subprocess.run(f"git tag -l {tag}",
+                                shell=True, check=True,
+                                stdout=subprocess.PIPE,
+                                universal_newlines=True)
+        if result.stdout.strip():
+            print(f"Error: Version {version} (tag {tag}) already exists")
+            return True
+        return False
+    except subprocess.CalledProcessError:
+        print("Error: Failed to check existing tags")
+        return True
+
 def get_current_version():
     """Read the current version from the VERSION file"""
     try:
@@ -113,6 +129,10 @@ def main():
 
     # Validate version format
     if not validate_version(version):
+        sys.exit(1)
+
+    # Check if version already exists
+    if check_version_exists(version):
         sys.exit(1)
 
     # Update VERSION file
