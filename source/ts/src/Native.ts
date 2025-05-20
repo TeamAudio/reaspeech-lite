@@ -12,6 +12,7 @@ export default class Native {
   getWhisperLanguages = Juce.getNativeFunction("getWhisperLanguages");
   play = Juce.getNativeFunction("play");
   stop = Juce.getNativeFunction("stop");
+  saveFile = Juce.getNativeFunction("saveFile");
   setPlaybackPosition = Juce.getNativeFunction("setPlaybackPosition");
   setWebState = Juce.getNativeFunction("setWebState");
   transcribeAudioSource = Juce.getNativeFunction("transcribeAudioSource");
