@@ -224,11 +224,9 @@ export default class TranscriptGrid {
   ]);
 
   setPlaybackPosition(position: number, isPlaying: boolean) {
-    // Deselect all first
-    this.gridApi.deselectAll();
-
     // Don't select a row if not playing
     if (!isPlaying) {
+      this.gridApi.deselectAll();
       return;
     }
 
@@ -242,7 +240,8 @@ export default class TranscriptGrid {
 
     if (activeRow) {
       const node = this.gridApi.getRowNode(activeRow.id);
-      if (node) {
+      if (node && !node.isSelected()) {
+        this.gridApi.deselectAll();
         node.setSelected(true);
         this.gridApi.ensureNodeVisible(node);
       }
