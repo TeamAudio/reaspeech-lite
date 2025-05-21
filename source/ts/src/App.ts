@@ -35,6 +35,7 @@ export default class App {
     this.initState();
     this.initProcessButton();
     this.initCreateButton();
+    this.initExportButton();
     this.startPolling();
   }
 
@@ -69,6 +70,11 @@ export default class App {
     document.getElementById('create-markers').onclick = () => { this.handleCreateMarkers('markers'); };
     document.getElementById('create-regions').onclick = () => { this.handleCreateMarkers('regions'); };
     document.getElementById('create-notes').onclick = () => { this.handleCreateMarkers('notes'); };
+  }
+
+  initExportButton() {
+    document.getElementById('export-csv').onclick = () => { this.transcriptGrid.exportCSV(this.saveAs.bind(this)); }
+    document.getElementById('export-srt').onclick = () => { this.transcriptGrid.exportSRT(this.saveAs.bind(this)); };
   }
 
   startPolling() {
@@ -391,6 +397,19 @@ export default class App {
       return this.native.setPlaybackPosition(seconds).then(() => {
         return this.native.play();
       });
+    });
+  }
+
+  saveAs(content: string, _mimeType: string, filename: string) {
+    const title = "Save As";
+    const extension = filename.split('.').pop();
+    const patterns = "*." + extension;
+    return this.native.saveFile(title, filename, patterns, content).then((result) => {
+      if (result.error) {
+        this.showAlert('danger', '<b>Error:</b> ' + htmlEscape(result.error));
+      } else if (result.filePath) {
+        this.showAlert('success', '<b>Success:</b> File saved to ' + htmlEscape(result.filePath));
+      }
     });
   }
 }

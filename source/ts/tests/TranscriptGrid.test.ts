@@ -423,4 +423,126 @@ describe('TranscriptGrid', () => {
     options.onCellClicked!(params);
     expect(onPlayAt).not.toHaveBeenCalled();
   });
+
+  it('exports CSV', () => {
+    const row1 = {
+      id: 'test123-0',
+      start: 10,
+      end: 20,
+      text: 'Hello',
+      score: 0.95,
+      source: 'Test Audio',
+      sourceID: 'test123'
+    };
+    const row2 = {
+      id: 'test123-1',
+      start: 30,
+      end: 40,
+      text: 'World',
+      score: 0.85,
+      source: 'Test Audio',
+      sourceID: 'test123'
+    };
+    grid.addRows([row1, row2]);
+
+    grid['gridApi'].getDataAsCsv = jest.fn((params) => {
+      return 'generated CSV content';
+    });
+
+    let content = '', mimeType = '', filename = '';
+    grid.exportCSV((c, m, f) => {
+      content = c;
+      mimeType = m;
+      filename = f;
+    });
+
+    expect(content).toBe('generated CSV content');
+    expect(mimeType).toBe('text/csv;charset=utf-8');
+    expect(filename).toBe('transcript.csv');
+  });
+
+  it('exports SRT', () => {
+    const row1 = {
+      id: 'test123-0',
+      start: 10,
+      end: 20,
+      playbackStart: 10,
+      playbackEnd: 20,
+      text: 'Hello',
+      score: 0.95,
+      source: 'Test Audio',
+      sourceID: 'test123'
+    };
+    const row2 = {
+      id: 'test123-1',
+      start: 30,
+      end: 40,
+      playbackStart: 30,
+      playbackEnd: 40,
+      text: 'World',
+      score: 0.85,
+      source: 'Test Audio',
+      sourceID: 'test123'
+    };
+    grid.addRows([row1, row2]);
+
+    let content = '', mimeType = '', filename = '';
+    grid.exportSRT((c, m, f) => {
+      content = c;
+      mimeType = m;
+      filename = f;
+    });
+
+    expect(content).toBe('1\n00:00:10,000 --> 00:00:20,000\nHello\n\n2\n00:00:30,000 --> 00:00:40,000\nWorld\n');
+    expect(mimeType).toBe('application/x-subrip');
+    expect(filename).toBe('transcript.srt');
+  });
+
+  it('processes cells for CSV export', () => {
+    // Test timestamp formatting
+    const timeParams = {
+      value: 10,
+      column: { getColId: () => 'playbackStart' },
+    } as any;
+    expect(grid.processCellForCSV(timeParams)).toBe('0:10.000');
+
+    // Test null values
+    timeParams.value = null;
+    expect(grid.processCellForCSV(timeParams)).toBe('');
+
+    // Test score formatting
+    const scoreParams = {
+      value: 0.756,
+      column: { getColId: () => 'score' },
+    } as any;
+    expect(grid.processCellForCSV(scoreParams)).toBe('0.76');
+
+    // Test null score
+    scoreParams.value = null;
+    expect(grid.processCellForCSV(scoreParams)).toBe('');
+
+    // Test other columns
+    const otherParams = {
+      value: 'test',
+      column: { getColId: () => 'text' },
+    } as any;
+    expect(grid.processCellForCSV(otherParams)).toBe('test');
+  });
+
+  it('processes rows for SRT export', () => {
+    const row = {
+      id: 'test123-0',
+      start: 10,
+      end: 20,
+      playbackStart: 10,
+      playbackEnd: 20,
+      text: 'Hello',
+      score: 0.95,
+      source: 'Test Audio',
+      sourceID: 'test123',
+    };
+    const index = 0;
+    const result = grid.processRowForSRT(row, index);
+    expect(result).toBe('1\n00:00:10,000 --> 00:00:20,000\nHello\n');
+  });
 });

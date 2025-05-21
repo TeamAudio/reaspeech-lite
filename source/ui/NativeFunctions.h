@@ -6,6 +6,7 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_core/juce_core.h>
+#include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_gui_extra/juce_gui_extra.h>
 
 #include "../Config.h"
@@ -56,6 +57,7 @@ public:
             .withNativeFunction ("getWhisperLanguages", bindFn (&NativeFunctions::getWhisperLanguages))
             .withNativeFunction ("play", bindFn (&NativeFunctions::play))
             .withNativeFunction ("stop", bindFn (&NativeFunctions::stop))
+            .withNativeFunction ("saveFile", bindFn (&NativeFunctions::saveFile))
             .withNativeFunction ("setPlaybackPosition", bindFn (&NativeFunctions::setPlaybackPosition))
             .withNativeFunction ("setWebState", bindFn (&NativeFunctions::setWebState))
             .withNativeFunction ("transcribeAudioSource", bindFn (&NativeFunctions::transcribeAudioSource));
@@ -252,6 +254,48 @@ public:
             return;
         }
         complete (makeError ("Playback controller not found"));
+    }
+
+    void saveFile (const juce::var& args, std::function<void (const juce::var&)> complete)
+    {
+        if (! args.isArray() || args.size() < 4 || ! args[0].isString() || ! args[1].isString() || ! args[2].isString() || ! args[3].isString())
+        {
+            complete (makeError ("Invalid arguments"));
+            return;
+        }
+
+        const auto title = args[0].toString();
+        const auto initialFilename = args[1].toString();
+        const auto patterns = args[2].toString();
+        const auto content = args[3].toString();
+
+        const auto initialFile = juce::File::getSpecialLocation (juce::File::userDocumentsDirectory)
+            .getChildFile (initialFilename);
+
+        const auto flags = juce::FileBrowserComponent::saveMode
+            | juce::FileBrowserComponent::canSelectFiles
+            | juce::FileBrowserComponent::warnAboutOverwriting;
+
+        fileChooser = std::make_unique<juce::FileChooser> (title, initialFile, patterns);
+        fileChooser->launchAsync (flags, [this, content, complete] (const juce::FileChooser& chooser)
+        {
+            const auto file = chooser.getResult();
+            if (file != juce::File())
+            {
+                if (file.replaceWithText (content, false))
+                {
+                    juce::DynamicObject::Ptr result = new juce::DynamicObject();
+                    result->setProperty ("filePath", file.getFullPathName());
+                    complete (juce::var (result.get()));
+                    return;
+                }
+                complete (makeError ("Failed to save file"));
+                return;
+            }
+            juce::DynamicObject::Ptr result = new juce::DynamicObject();
+            result->setProperty ("filePath", "");
+            complete (juce::var (result.get()));
+        });
     }
 
     void setPlaybackPosition (const juce::var& args, std::function<void (const juce::var&)> complete)
@@ -477,4 +521,6 @@ private:
     std::unique_ptr<ASREngine> asrEngine;
     std::atomic<ASRThreadPoolJobStatus> asrStatus;
     juce::ThreadPool threadPool { 1 };
+
+    std::unique_ptr<juce::FileChooser> fileChooser;
 };

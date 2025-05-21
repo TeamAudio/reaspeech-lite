@@ -1,5 +1,5 @@
 import { describe, expect, it } from '@jest/globals';
-import { htmlEscape, timestampToString } from '../src/Utils';
+import { htmlEscape, timestampToString, timestampToStringSRT } from '../src/Utils';
 
 describe('Utils', () => {
   describe('htmlEscape', () => {
@@ -50,6 +50,39 @@ describe('Utils', () => {
     it('should handle negative values', () => {
       expect(timestampToString(-65.123)).toBe('-1:05.123');
       expect(timestampToString(-3661.789)).toBe('-1:01:01.789');
+    });
+  });
+
+  describe('timestampToStringSRT', () => {
+    it('should format seconds into M:SS.mmm', () => {
+      expect(timestampToStringSRT(65.123)).toBe('00:01:05,123');
+    });
+
+    it('should handle zero seconds', () => {
+      expect(timestampToStringSRT(0)).toBe('00:00:00,000');
+    });
+
+    it('should handle seconds less than a minute', () => {
+      expect(timestampToStringSRT(45.5)).toBe('00:00:45,500');
+    });
+
+    it('should floor milliseconds', () => {
+      expect(timestampToStringSRT(10.1234)).toBe('00:00:10,123');
+      expect(timestampToStringSRT(10.1239)).toBe('00:00:10,123');
+    });
+
+    it('should pad seconds and milliseconds with leading zeros', () => {
+      expect(timestampToStringSRT(1.1)).toBe('00:00:01,100');
+      expect(timestampToStringSRT(10.01)).toBe('00:00:10,010');
+    });
+
+    it('should handle large values', () => {
+      expect(timestampToStringSRT(3661.789)).toBe('01:01:01,789');
+    });
+
+    it('should handle negative values', () => {
+      expect(timestampToStringSRT(-65.123)).toBe('-00:01:05,123');
+      expect(timestampToStringSRT(-3661.789)).toBe('-01:01:01,789');
     });
   });
 });
