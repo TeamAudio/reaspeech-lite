@@ -81,6 +81,28 @@
 
         <div id="transcript-grid" style="height: calc(100vh - 152px); min-height: 200px"></div>
       </div>
+
+      <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#process-modal">
+        Launch demo modal
+      </button>
+
+      <div id="process-modal" class="modal fade" tabindex="-1" aria-labelledby="process-modal-label" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 id="process-modal-label" class="modal-title">Select Audio Sources</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <p id="process-modal-text">Please select the audio sources to process.</p>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+              <button id="process-modal-confirm" type="button" class="btn btn-primary">Start Processing</button>
+            </div>
+          </div>
+        </div>
+      </div>
     </main>
 
     <script>
