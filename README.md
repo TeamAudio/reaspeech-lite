@@ -156,6 +156,7 @@ You will need to install a few dependencies:
 * [CMake](https://cmake.org/)
 * A C++ compiler - we recommend MSVC 2022 on Windows, Clang on all other operating systems
 * [NPM](https://www.npmjs.com/) - for ease of use, we recommend using [Node Version Manager](https://github.com/nvm-sh/nvm)
+* To build on Linux, please see [JUCE Dependencies on Linux](https://github.com/juce-framework/JUCE/blob/master/docs/Linux%20Dependencies.md)
 
 With these dependencies installed, first build the TypeScript code:
 
