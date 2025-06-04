@@ -326,7 +326,15 @@ export default class App {
 
   setProgress(progress: number) {
     const progressElement = document.getElementById('progress');
+    if (!progressElement) {
+      console.warn('Progress element not found in the DOM.');
+      return;
+    }
     const progressBar = progressElement.querySelector('.progress-bar') as HTMLElement;
+    if (!progressBar) {
+      console.warn('Progress bar element not found in the DOM.');
+      return;
+    }
     progressElement.setAttribute('aria-valuenow', progress.toString());
     progressBar.style.width = progress + '%';
   }
