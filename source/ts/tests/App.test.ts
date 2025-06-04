@@ -307,6 +307,26 @@ describe('App', () => {
       mockSetProcessText.mockRestore();
     });
 
+    it('resets progress bar when not processing', async () => {
+      const app = new App();
+      const progress = document.getElementById('progress');
+      const progressBar = progress?.querySelector('.progress-bar') as HTMLElement;
+
+      if (!progress || !progressBar) {
+        throw new Error('Progress element or progress bar not found');
+      }
+
+      progress.setAttribute('aria-valuenow', '50');
+      progressBar.style.width = '50%';
+
+      app.processing = false;
+
+      await app.updateTranscriptionStatus();
+
+      expect(progress.getAttribute('aria-valuenow')).toBe('0');
+      expect(progressBar.style.width).toBe('0%');
+    });
+
     it('updates playback regions', async () => {
       const app = new App();
 

@@ -283,16 +283,14 @@ export default class App {
 
   updateTranscriptionStatus() {
     if (!this.processing) {
+      this.setProgress(0);
       return Promise.resolve();
     }
     return this.native.getTranscriptionStatus().then((status) => {
       if (status.status !== '') {
         this.setProcessText(status.status + '...');
       }
-      const progress = document.getElementById('progress');
-      const progressBar = progress.querySelector('.progress-bar') as HTMLElement;
-      progress.setAttribute('aria-valuenow', status.progress.toString());
-      progressBar.style.width = status.progress + '%';
+      this.setProgress(status.progress);
     });
   }
 
@@ -324,6 +322,13 @@ export default class App {
 
   setProcessText(text) {
     document.getElementById('process-text').innerText = text;
+  }
+
+  setProgress(progress: number) {
+    const progressElement = document.getElementById('progress');
+    const progressBar = progressElement.querySelector('.progress-bar') as HTMLElement;
+    progressElement.setAttribute('aria-valuenow', progress.toString());
+    progressBar.style.width = progress + '%';
   }
 
   enableProcessButton() {
