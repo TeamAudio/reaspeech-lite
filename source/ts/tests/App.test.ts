@@ -568,4 +568,54 @@ describe('App', () => {
       expect(mockNative.play).toHaveBeenCalled();
     });
   });
+
+  describe('search', () => {
+    it('handles search input', () => {
+      const app = new App();
+
+      (app as any).transcriptGrid = {
+        filter: jest.fn()
+      };
+
+      const searchInput = document.getElementById('search-input') as HTMLInputElement;
+      searchInput.value = 'test';
+
+      const event = { target: searchInput } as unknown as Event;
+      app.handleSearch(event);
+
+      expect(app.transcriptGrid.filter).toHaveBeenCalledWith('test');
+    });
+
+    it('clears search input', () => {
+      const app = new App();
+
+      (app as any).transcriptGrid = {
+        filter: jest.fn()
+      };
+
+      const searchInput = document.getElementById('search-input') as HTMLInputElement;
+      searchInput.value = 'test';
+
+      app.clearSearch();
+
+      expect(searchInput.value).toBe('');
+      expect(app.transcriptGrid.filter).toHaveBeenCalledWith('');
+    });
+
+    it('focuses search input', () => {
+      const app = new App();
+
+      const searchInput = document.getElementById('search-input') as HTMLInputElement;
+      const focusSpy = jest.spyOn(searchInput, 'focus');
+      const selectSpy = jest.spyOn(searchInput, 'select');
+
+      app.focusSearch();
+
+      expect(focusSpy).toHaveBeenCalled();
+      expect(selectSpy).toHaveBeenCalled();
+
+      focusSpy.mockRestore();
+      selectSpy.mockRestore();
+    });
+  });
 });
