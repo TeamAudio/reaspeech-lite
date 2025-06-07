@@ -101,6 +101,41 @@ describe('TranscriptGrid', () => {
     expect(grid.getRows()).toHaveLength(0);
   });
 
+  it('should remove rows by audio source ID', () => {
+    const segments1 = [
+      { start: 10, end: 15, text: 'Hello', score: 0.95 },
+      { start: 16, end: 20, text: 'World', score: 0.85 }
+    ];
+    const segments2 = [
+      { start: 5, end: 8, text: 'Different', score: 0.90 },
+      { start: 25, end: 30, text: 'Source', score: 0.80 }
+    ];
+    const audioSource1 = makeAudioSource('Test Audio 1', 'test123');
+    const audioSource2 = makeAudioSource('Test Audio 2', 'test456');
+
+    grid.addSegments(segments1, audioSource1);
+    grid.addSegments(segments2, audioSource2);
+
+    const allRows = grid.getRows();
+    expect(allRows).toHaveLength(4);
+
+    const rowsToRemove = allRows.filter(row => row.sourceID === 'test123');
+    const rowsToKeep = allRows.filter(row => row.sourceID === 'test456');
+    expect(rowsToRemove).toHaveLength(2);
+    expect(rowsToKeep).toHaveLength(2);
+
+    (grid['gridApi'].applyTransaction as jest.Mock).mockClear();
+
+    grid.removeRowsBySourceID('test123');
+
+    expect(grid['gridApi'].applyTransaction).toHaveBeenCalledWith({ remove: rowsToRemove });
+    expect(grid.getRows()).toHaveLength(2);
+
+    // Verify remaining rows are from the other source
+    const remainingRows = grid.getRows();
+    expect(remainingRows.every(row => row.sourceID === 'test456')).toBe(true);
+  });
+
   it('should find playable range based on playback regions', () => {
     const playbackRegions = [
       {

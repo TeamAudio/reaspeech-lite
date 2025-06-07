@@ -6,6 +6,9 @@ import { delay, htmlEscape } from './Utils';
 declare global {
   interface Window {
     __JUCE__: {
+      backend: {
+        addEventListener: (event: string, callback: (event: any) => void) => void;
+      }
       initialisationData: {
         webState?: string[];
       }
@@ -27,7 +30,6 @@ export default class App {
       modelName: 'small',
       language: '',
       translate: false,
-      transcript: null
     };
   }
 
@@ -36,6 +38,7 @@ export default class App {
     this.initProcessButton();
     this.initCreateButton();
     this.initExportButton();
+    this.initNativeEvents();
     this.startPolling();
   }
 
@@ -77,6 +80,10 @@ export default class App {
     document.getElementById('export-srt').onclick = () => { this.transcriptGrid.exportSRT(this.saveAs.bind(this)); };
   }
 
+  initNativeEvents() {
+    window.__JUCE__.backend.addEventListener('audioSourceContentUpdated', this.handleAudioSourceUpdate.bind(this));
+  }
+
   startPolling() {
     setInterval(() => {
       this.update();
@@ -85,8 +92,7 @@ export default class App {
 
   loadState() {
     if (!window.__JUCE__.initialisationData.webState
-      || !window.__JUCE__.initialisationData.webState[0]) {
-      console.warn('Missing web state');
+        || !window.__JUCE__.initialisationData.webState[0]) {
       return Promise.resolve();
     }
     try {
@@ -95,7 +101,25 @@ export default class App {
       console.warn('Failed to parse web state:', e);
       this.showAlert('danger', '<b>Error:</b> Failed to read project data!');
     }
-    return Promise.resolve();
+    if (this.state.transcript) {
+      return this.migrateTranscript();
+    } else {
+      return Promise.resolve();
+    }
+  }
+
+  migrateTranscript() {
+    const groups = this.state.transcript.groups || [];
+    const promises = groups.map((group) => {
+      return this.native.setAudioSourceTranscript(
+        group.audioSource.persistentID,
+        { segments: group.segments }
+      );
+    });
+    return Promise.all(promises).then(() => {
+      delete this.state.transcript;
+      return this.saveState();
+    });
   }
 
   saveState() {
@@ -143,16 +167,22 @@ export default class App {
 
   initTranscriptGrid() {
     this.transcriptGrid = new TranscriptGrid('#transcript-grid', (seconds) => this.playAt(seconds));
+    return this.native.getAudioSources().then((audioSources: AudioSource[]) => {
+      const promises = audioSources.map((audioSource) => {
+        return this.mergeTranscript(audioSource);
+      });
+      return Promise.all(promises).then(() => {});
+    });
+  }
 
-    if (this.state.transcript) {
-      const groups = this.state.transcript.groups;
-      if (groups && groups.length > 0) {
-        this.showTranscript();
-        groups.forEach((group) => {
-          this.transcriptGrid.addSegments(group.segments, group.audioSource);
-        });
+  handleAudioSourceUpdate(event: { persistentID: string }) {
+    return this.native.getAudioSources().then((audioSources: AudioSource[]) => {
+      for (const audioSource of audioSources) {
+        if (audioSource.persistentID === event.persistentID) {
+          return this.mergeTranscript(audioSource);
+        }
       }
-    }
+    });
   }
 
   handleModelChange() {
@@ -195,7 +225,7 @@ export default class App {
           this.setProcessText('Process');
           this.hideCancel();
           this.hideSpinner();
-          return this.saveState();
+          return Promise.resolve();
         }
 
         const audioSource = audioSources.shift();
@@ -205,17 +235,15 @@ export default class App {
             return Promise.resolve();
           }
 
-          if (result.segments && result.segments.length > 0) {
-            this.showTranscript();
-            this.transcriptGrid.addSegments(result.segments, audioSource);
-            this.state.transcript = this.state.transcript || { groups: [] };
-            this.state.transcript.groups.push({ segments: result.segments, audioSource: audioSource });
-          } else if (result.error) {
+          if (result.error) {
             this.showAlert('danger', '<b>Error:</b> ' + htmlEscape(result.error));
             audioSources.length = 0;
+            return processNextAudioSource();
           }
 
-          return processNextAudioSource();
+          return this.native.setAudioSourceTranscript(audioSource.persistentID, result).then(() => {
+            return processNextAudioSource();
+          });
         });
       };
 
@@ -399,10 +427,30 @@ export default class App {
     document.getElementById('transcript').style.display = 'none';
   }
 
+  mergeTranscript(audioSource: AudioSource) {
+    return this.native.getAudioSourceTranscript(audioSource.persistentID).then((transcript) => {
+      if (transcript.error) {
+        console.warn('Error loading transcript for audio source:', audioSource.persistentID, transcript.error);
+        return;
+      }
+
+      this.transcriptGrid.removeRowsBySourceID(audioSource.persistentID);
+
+      if (transcript.segments) {
+        this.showTranscript();
+        this.transcriptGrid.addSegments(transcript.segments, audioSource);
+      }
+    });
+  }
+
   clearTranscript() {
     this.transcriptGrid.clear();
-    this.state.transcript = null;
-    return this.saveState();
+    return this.native.getAudioSources().then((audioSources: AudioSource[]) => {
+      const promises = audioSources.map((audioSource) => {
+        return this.native.setAudioSourceTranscript(audioSource.persistentID, {});
+      });
+      return Promise.all(promises).then(() => {});
+    });
   }
 
   playAt(seconds: number) {

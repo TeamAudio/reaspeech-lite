@@ -10,6 +10,7 @@
 #include <juce_gui_extra/juce_gui_extra.h>
 
 #include "../plugin/ReaSpeechLiteAudioProcessorImpl.h"
+#include "AudioSourceEventEmitter.h"
 #include "NativeFunctions.h"
 #include "Resources.h"
 
@@ -37,6 +38,8 @@ public:
                     .withOptionsFrom (*nativeFunctions)
             );
             addAndMakeVisible (*webComponent);
+
+            audioSourceEventEmitter = std::make_unique<AudioSourceEventEmitter> (*editorView, *webComponent);
 
             // Navigate to index page
             webComponent->goToURL (juce::WebBrowserComponent::getResourceProviderRoot());
@@ -76,6 +79,7 @@ public:
 private:
     std::unique_ptr<NativeFunctions> nativeFunctions;
     std::unique_ptr<juce::WebBrowserComponent> webComponent;
+    std::unique_ptr<AudioSourceEventEmitter> audioSourceEventEmitter;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ReaSpeechLiteAudioProcessorEditor)
 };

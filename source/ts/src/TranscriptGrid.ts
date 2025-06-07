@@ -78,6 +78,14 @@ export default class TranscriptGrid {
     this.addRows(rows);
   }
 
+  removeRowsBySourceID(sourceID: string) {
+    const rowsToRemove = this.rowData.filter(row => row.sourceID === sourceID);
+    if (rowsToRemove.length > 0) {
+      this.gridApi.applyTransaction({ remove: rowsToRemove });
+      this.rowData = this.rowData.filter(row => row.sourceID !== sourceID);
+    }
+  }
+
   clear() {
     this.gridApi.applyTransaction({ remove: this.rowData });
     this.rowData.length = 0;

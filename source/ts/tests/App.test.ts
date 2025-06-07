@@ -15,6 +15,9 @@ describe('App', () => {
     warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
     window.__JUCE__ = {
+      backend: {
+        addEventListener: jest.fn(),
+      },
       initialisationData: {
         webState: ['']
       }
@@ -37,7 +40,6 @@ describe('App', () => {
       expect(app.state.modelName).toBe('small');
       expect(app.state.language).toBe('');
       expect(app.state.translate).toBe(false);
-      expect(app.state.transcript).toBeNull();
     });
 
     it('initializes models correctly', async () => {
@@ -80,17 +82,18 @@ describe('App', () => {
       expect(select.options[2].textContent).toBe('French');
     });
 
-    it('initializes transcript grid correctly', () => {
+    it('initializes transcript grid correctly', async () => {
       const app = new App();
 
-      app.state.transcript = {
-        groups: [{
-          segments: [{ text: 'test', start: 0, end: 1 }],
-          audioSource: { persistentID: 'audio1', name: 'Audio 1' }
-        }]
-      };
+      mockNative.getAudioSourceTranscript.mockResolvedValue({
+        segments: [{ text: 'test', start: 0, end: 1 }]
+      });
 
-      app.initTranscriptGrid();
+      mockNative.getAudioSources.mockResolvedValue([
+        { persistentID: 'audio1', name: 'Audio 1' }
+      ]);
+
+      await app.initTranscriptGrid();
 
       const rows = app.transcriptGrid.getRows();
       expect(rows.length).toBe(1);
@@ -108,7 +111,6 @@ describe('App', () => {
         modelName: 'medium',
         language: 'fr',
         translate: true,
-        transcript: null
       })];
 
       const app = new App();
@@ -117,32 +119,6 @@ describe('App', () => {
         expect(app.state.modelName).toBe('medium');
         expect(app.state.language).toBe('fr');
         expect(app.state.translate).toBe(true);
-        expect(app.state.transcript).toBeNull();
-      });
-    });
-
-    it('loads state with transcript', () => {
-      const transcript = {
-        groups: [{
-          segments: [{ text: 'test', start: 0, end: 1 }],
-          audioSource: { persistentID: 'audio1', name: 'Audio 1' }
-        }]
-      };
-
-      window.__JUCE__.initialisationData.webState = [JSON.stringify({
-        modelName: 'medium',
-        language: 'fr',
-        translate: true,
-        transcript: transcript
-      })];
-
-      const app = new App();
-
-      app.loadState().then(() => {
-        expect(app.state.modelName).toBe('medium');
-        expect(app.state.language).toBe('fr');
-        expect(app.state.translate).toBe(true);
-        expect(app.state.transcript).toEqual(transcript);
       });
     });
 
@@ -154,7 +130,6 @@ describe('App', () => {
 
       expect(app.state.language).toBe('');
       expect(app.state.translate).toBe(false);
-      expect(app.state.transcript).toBeNull();
 
       expect(warnSpy).toHaveBeenCalled();
     });
@@ -167,7 +142,6 @@ describe('App', () => {
 
       expect(app.state.language).toBe('');
       expect(app.state.translate).toBe(false);
-      expect(app.state.transcript).toBeNull();
 
       expect(warnSpy).toHaveBeenCalled();
 
@@ -258,6 +232,35 @@ describe('App', () => {
       expect(mockSaveState).toHaveBeenCalled();
 
       mockSaveState.mockRestore();
+    });
+
+    it('handles audio source update', async () => {
+      const app = new App();
+
+      mockNative.getAudioSourceTranscript
+        .mockResolvedValueOnce({})
+        .mockResolvedValueOnce({
+          segments: [{ text: 'test', start: 0, end: 1 }]
+        });
+
+      mockNative.getAudioSources.mockResolvedValue([
+        { persistentID: 'audio1', name: 'Audio 1' }
+      ]);
+
+      await app.initTranscriptGrid();
+
+      const initRows = app.transcriptGrid.getRows();
+      expect(initRows.length).toBe(0);
+
+      await app.handleAudioSourceUpdate({ persistentID: 'audio1' });
+
+      const rows = app.transcriptGrid.getRows();
+      expect(rows.length).toBe(1);
+      expect(rows[0].playbackStart).toBe(0);
+      expect(rows[0].playbackEnd).toBe(1);
+      expect(rows[0].text).toBe('test');
+      expect(rows[0].source).toBe('Audio 1');
+      expect(rows[0].sourceID).toBe('audio1');
     });
   });
 
@@ -404,16 +407,8 @@ describe('App', () => {
 
       await app.handleProcess();
 
-      expect(app.transcriptGrid.clear).toHaveBeenCalled();
-      expect(app.transcriptGrid.addSegments).toHaveBeenCalledTimes(2);
-      expect(app.transcriptGrid.addSegments).toHaveBeenCalledWith(segments, audioSource1);
-      expect(app.transcriptGrid.addSegments).toHaveBeenCalledWith(segments, audioSource2);
-      expect(app.state.transcript).toEqual({
-        groups: [
-          { segments, audioSource: audioSource1 },
-          { segments, audioSource: audioSource2 }
-        ]
-      });
+      expect(mockNative.setAudioSourceTranscript).toHaveBeenCalledWith('audio1', { segments });
+      expect(mockNative.setAudioSourceTranscript).toHaveBeenCalledWith('audio2', { segments });
     });
 
     it('handles process errors', async () => {
@@ -434,7 +429,6 @@ describe('App', () => {
 
       expect(app.transcriptGrid.clear).toHaveBeenCalled();
       expect(app.transcriptGrid.addSegments).not.toHaveBeenCalled();
-      expect(app.state.transcript).toBeNull();
 
       const alerts = document.getElementById('alerts') as HTMLElement;
       expect(alerts.innerHTML).toContain(error);
@@ -447,12 +441,14 @@ describe('App', () => {
         clear: jest.fn()
       };
 
-      app.state.transcript = { groups: [] };
+      mockNative.getAudioSources.mockResolvedValue([
+        { persistentID: 'audio1', name: 'Audio 1' }
+      ]);
 
       await app.clearTranscript();
 
       expect(app.transcriptGrid.clear).toHaveBeenCalled();
-      expect(app.state.transcript).toBeNull();
+      expect(mockNative.setAudioSourceTranscript).toHaveBeenCalledWith('audio1', {});
     });
   });
 
