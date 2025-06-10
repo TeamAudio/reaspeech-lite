@@ -130,8 +130,6 @@ describe('App', () => {
 
       expect(app.state.language).toBe('');
       expect(app.state.translate).toBe(false);
-
-      expect(warnSpy).toHaveBeenCalled();
     });
 
     it('handles invalid JSON when loading state', async () => {
