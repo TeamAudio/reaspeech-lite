@@ -38,6 +38,7 @@ export default class App {
     this.initProcessButton();
     this.initCreateButton();
     this.initExportButton();
+    this.initSearch();
     this.initNativeEvents();
     this.startPolling();
   }
@@ -76,8 +77,14 @@ export default class App {
   }
 
   initExportButton() {
-    document.getElementById('export-csv').onclick = () => { this.transcriptGrid.exportCSV(this.saveAs.bind(this)); }
+    document.getElementById('export-csv').onclick = () => { this.transcriptGrid.exportCSV(this.saveAs.bind(this)); };
     document.getElementById('export-srt').onclick = () => { this.transcriptGrid.exportSRT(this.saveAs.bind(this)); };
+  }
+
+  initSearch() {
+    document.getElementById('search-icon').onclick = this.focusSearch.bind(this);
+    document.getElementById('search-input').oninput = this.handleSearch.bind(this);
+    document.getElementById('clear-search').onclick = this.clearSearch.bind(this);
   }
 
   initNativeEvents() {
@@ -302,6 +309,11 @@ export default class App {
     }
   }
 
+  handleSearch(event: Event) {
+    const target = event.target as HTMLInputElement;
+    this.transcriptGrid.filter(target.value);
+  }
+
   update() {
     return Promise.all([
       this.updateTranscriptionStatus(),
@@ -451,6 +463,18 @@ export default class App {
       });
       return Promise.all(promises).then(() => {});
     });
+  }
+
+  clearSearch() {
+    const searchInput = document.getElementById('search-input') as HTMLInputElement;
+    searchInput.value = '';
+    this.transcriptGrid.filter('');
+  }
+
+  focusSearch() {
+    const searchInput = document.getElementById('search-input') as HTMLInputElement;
+    searchInput.focus();
+    searchInput.select();
   }
 
   playAt(seconds: number) {

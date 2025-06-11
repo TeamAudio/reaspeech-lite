@@ -14,6 +14,7 @@ import {
   ICellRendererParams,
   ModuleRegistry,
   ProcessCellForExportParams,
+  QuickFilterModule,
   RowApiModule,
   RowSelectionModule,
   RowStyleModule,
@@ -26,9 +27,10 @@ import {
 } from "ag-grid-community";
 
 ModuleRegistry.registerModules([
-  ClientSideRowModelModule,
   ClientSideRowModelApiModule,
+  ClientSideRowModelModule,
   CsvExportModule,
+  QuickFilterModule,
   RowApiModule,
   RowSelectionModule,
   RowStyleModule,
@@ -119,6 +121,10 @@ export default class TranscriptGrid {
     const start = timestampToStringSRT(row.playbackStart ?? 0);
     const end = timestampToStringSRT(row.playbackEnd ?? 0);
     return `${index + 1}\n${start} --> ${end}\n${row.text}\n`;
+  }
+
+  filter(text: string) {
+    this.gridApi.setGridOption('quickFilterText', text);
   }
 
   findPlayableRange(playbackRegions: PlaybackRegion[], segmentStart: number, segmentEnd: number) {
