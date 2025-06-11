@@ -1,0 +1,49 @@
+name: Publish GitHub Release Notes to website repo
+
+on:
+  release:
+    types: [edited]
+  workflow_dispatch: 
+    inputs:
+      project_id:
+        description: 'Project ID'
+        required: true
+        default: 'Test Project'
+      project_name:
+        description: 'Test project name'
+        required: true
+        default: 'Test Project Name'
+      project_repository:
+        description: 'GitHub repository where the project is hosted'
+        required: true
+        default: 'Test Repo'
+      release_body:
+        description: 'Release body content'
+        required: true
+        default: 'Release body content goes here'
+
+jobs:
+  publish-release-notes:
+    runs-on: ubuntu-latest
+    # if: ${{ github.event.release.prerelease == false }} 
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          repository: TeamAudio/techaudio-web
+          ref: actions-v1
+          fetch-depth: 0  # Fetch all history for accurate versioning
+          token: ${{ secrets.PUBLISH_RELEASE_SERVICE_TOKEN}}
+          path: techaudio-web
+
+      - name: Call publish-release action
+        uses: ./techaudio-web/.github/actions/publish-release
+        with:
+          project_id: reaspeech-lite
+          project_name: ReaSpeech Lite
+          project_repository: ${{ github.repository }}
+          version_tag: ${{ github.event.release.tag_name || 'v0.0.1-test' }}
+          release_body: ${{ github.event.release.body }}
+          service_token: ${{ secrets.PUBLISH_RELEASE_SERVICE_TOKEN }}
+

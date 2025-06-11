@@ -93,9 +93,19 @@ def run_command(command, description):
         print("DRY RUN: Command not executed.")
         return True
     try:
-        result = subprocess.run(command, shell=True, check=True,
-                               stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                               universal_newlines=True)
+        if isinstance(command, str):
+            import shlex
+            command_args = shlex.split(command)
+        else:
+            command_args = command
+            
+        result = subprocess.run(command_args, 
+                               shell=False, # Avoids shell interpretation issues on Windows 
+                               check=True,
+                               stdout=subprocess.PIPE, 
+                               stderr=subprocess.PIPE,
+                               universal_newlines=True)  
+                               
         print(f"{description}: Success")
         if result.stdout:
             print(result.stdout)
