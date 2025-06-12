@@ -5,6 +5,7 @@ export default class Native {
   canCreateMarkers = Juce.getNativeFunction("canCreateMarkers");
   createMarkers = Juce.getNativeFunction("createMarkers");
   getAudioSources = Juce.getNativeFunction("getAudioSources");
+  getAudioSourceTranscript = Juce.getNativeFunction("getAudioSourceTranscript");
   getModels = Juce.getNativeFunction("getModels");
   getPlayHeadState = Juce.getNativeFunction("getPlayHeadState");
   getRegionSequences = Juce.getNativeFunction("getRegionSequences");
@@ -13,6 +14,7 @@ export default class Native {
   play = Juce.getNativeFunction("play");
   stop = Juce.getNativeFunction("stop");
   saveFile = Juce.getNativeFunction("saveFile");
+  setAudioSourceTranscript = Juce.getNativeFunction("setAudioSourceTranscript");
   setPlaybackPosition = Juce.getNativeFunction("setPlaybackPosition");
   setWebState = Juce.getNativeFunction("setWebState");
   transcribeAudioSource = Juce.getNativeFunction("transcribeAudioSource");
