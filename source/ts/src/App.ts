@@ -40,9 +40,7 @@ export default class App {
   init() {
     this.initState();
     this.initAudioSources();
-    this.initProcessButton();
-    this.initCreateButton();
-    this.initExportButton();
+    this.initButtons();
     this.initSearch();
     this.initNativeEvents();
     this.startPolling();
@@ -63,6 +61,13 @@ export default class App {
     });
   }
 
+  initButtons() {
+    this.initProcessButton();
+    this.initClearTranscriptButton();
+    this.initCreateButton();
+    this.initExportButton();
+  }
+
   initProcessButton() {
     document.getElementById('process-button').onclick = () => {
       if (!this.processing) return;
@@ -81,6 +86,18 @@ export default class App {
     document.getElementById('process-modal-confirm').onclick = () => {
       if (this.processing) return;
       this.handleProcess();
+    };
+  }
+
+  initClearTranscriptButton() {
+    document.getElementById('clear-transcript-modal-confirm').onclick = () => {
+      if (this.processing) {
+        this.showAlert('warning', '<b>Warning:</b> Cannot clear transcript while processing!');
+      } else {
+        this.clearTranscript().then(() => {
+          this.hideTranscript();
+        });
+      }
     };
   }
 
