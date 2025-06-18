@@ -50,6 +50,7 @@ public:
             .withNativeFunction ("canCreateMarkers", bindFn (&NativeFunctions::canCreateMarkers))
             .withNativeFunction ("createMarkers", bindFn (&NativeFunctions::createMarkers))
             .withNativeFunction ("getAudioSources", bindFn (&NativeFunctions::getAudioSources))
+            .withNativeFunction ("getAudioSourceTranscript", bindFn (&NativeFunctions::getAudioSourceTranscript))
             .withNativeFunction ("getModels", bindFn (&NativeFunctions::getModels))
             .withNativeFunction ("getPlayHeadState", bindFn (&NativeFunctions::getPlayHeadState))
             .withNativeFunction ("getRegionSequences", bindFn (&NativeFunctions::getRegionSequences))
@@ -58,6 +59,7 @@ public:
             .withNativeFunction ("play", bindFn (&NativeFunctions::play))
             .withNativeFunction ("stop", bindFn (&NativeFunctions::stop))
             .withNativeFunction ("saveFile", bindFn (&NativeFunctions::saveFile))
+            .withNativeFunction ("setAudioSourceTranscript", bindFn (&NativeFunctions::setAudioSourceTranscript))
             .withNativeFunction ("setPlaybackPosition", bindFn (&NativeFunctions::setPlaybackPosition))
             .withNativeFunction ("setWebState", bindFn (&NativeFunctions::setWebState))
             .withNativeFunction ("transcribeAudioSource", bindFn (&NativeFunctions::transcribeAudioSource));
@@ -136,6 +138,32 @@ public:
                 audioSources.add (audioSource.get());
             }
             complete (juce::var (audioSources));
+            return;
+        }
+        complete (makeError ("Document not found"));
+    }
+
+    void getAudioSourceTranscript (const juce::var& args, std::function<void (const juce::var&)> complete)
+    {
+        if (! args.isArray() || args.size() < 1 || ! args[0].isString())
+        {
+            complete (makeError ("Invalid arguments"));
+            return;
+        }
+
+        const auto audioSourceID = args[0].toString();
+        if (auto* document = getDocument())
+        {
+            const auto& audioSources = document->getAudioSources<ReaSpeechLiteAudioSource>();
+            for (const auto& audioSource : audioSources)
+            {
+                if (audioSource->getPersistentID() == audioSourceID)
+                {
+                    complete (audioSource->getTranscript());
+                    return;
+                }
+            }
+            complete (makeError ("Audio source not found"));
             return;
         }
         complete (makeError ("Document not found"));
@@ -296,6 +324,35 @@ public:
             result->setProperty ("filePath", "");
             complete (juce::var (result.get()));
         });
+    }
+
+    void setAudioSourceTranscript (const juce::var& args, std::function<void (const juce::var&)> complete)
+    {
+        if (! args.isArray() || args.size() < 2 || ! args[0].isString() || ! args[1].isObject())
+        {
+            complete (makeError ("Invalid arguments"));
+            return;
+        }
+
+        const auto audioSourceID = args[0].toString();
+        const auto transcript = args[1].getDynamicObject();
+
+        if (auto* document = getDocument())
+        {
+            const auto& audioSources = document->getAudioSources<ReaSpeechLiteAudioSource>();
+            for (const auto& audioSource : audioSources)
+            {
+                if (audioSource->getPersistentID() == audioSourceID)
+                {
+                    audioSource->setTranscript (transcript);
+                    complete (juce::var());
+                    return;
+                }
+            }
+            complete (makeError ("Audio source not found"));
+            return;
+        }
+        complete (makeError ("Document not found"));
     }
 
     void setPlaybackPosition (const juce::var& args, std::function<void (const juce::var&)> complete)
