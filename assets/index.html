@@ -38,7 +38,7 @@
           </div>
         </div>
 
-        <button id="process-button" class="btn btn-primary" type="button" style="min-width: 170px">
+        <button id="process-button" class="btn btn-primary" style="min-width: 170px" type="button" data-bs-toggle="modal" data-bs-target="#process-modal">
           <span id="spinner" class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="display: none"></span>
           <span id="process-cancel" style="display: none">Cancel</span>
           <span id="process-text">Process</span>
@@ -91,6 +91,39 @@
         </div>
 
         <div id="transcript-grid" style="height: calc(100vh - 152px); min-height: 200px"></div>
+      </div>
+
+      <div id="process-modal" class="modal fade" tabindex="-1" aria-labelledby="process-modal-label" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 id="process-modal-label" class="modal-title">Process</h5>
+            </div>
+
+            <div class="modal-body">
+              <div id="audio-sources">
+                <h6>Audio Sources</h6>
+                <table class="table table-sm">
+                  <thead>
+                    <tr>
+                      <th><!-- <input type="checkbox" class="form-check-input" id="audio-sources-select-all" aria-label="Select all audio sources"> --></th>
+                      <th>Name</th>
+                      <th>Duration</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="modal-footer">
+              <button id="process-modal-confirm" type="button" class="btn btn-primary" data-bs-dismiss="modal">Start</button>
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            </div>
+          </div>
+        </div>
       </div>
     </main>
 

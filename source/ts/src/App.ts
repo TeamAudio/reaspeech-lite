@@ -1,7 +1,7 @@
 import Native from './Native';
 import TranscriptGrid from './TranscriptGrid';
 import { AudioSource, PlaybackRegion, RegionSequence } from './ARA';
-import { delay, htmlEscape } from './Utils';
+import { delay, htmlEscape, timestampToString } from './Utils';
 
 declare global {
   interface Window {
@@ -19,9 +19,11 @@ declare global {
 
 export default class App {
   private native: Native;
-  public processing: boolean = false;
-  public state: any;
-  public transcriptGrid: TranscriptGrid;
+
+  processing: boolean = false;
+  selectedAudioSourceIDs: Set<string> = new Set();
+  state: any;
+  transcriptGrid: TranscriptGrid;
 
   constructor() {
     this.native = new Native();
@@ -35,6 +37,7 @@ export default class App {
 
   init() {
     this.initState();
+    this.initAudioSources();
     this.initProcessButton();
     this.initCreateButton();
     this.initExportButton();
@@ -51,13 +54,32 @@ export default class App {
     });
   }
 
+  initAudioSources() {
+    document.querySelector('#audio-sources').addEventListener('click', (event) => {
+      if ((event.target as HTMLElement).matches('.selected-audio-source-id')) {
+        const checkbox = event.target as HTMLInputElement;
+        const persistentID = checkbox.value;
+        if (checkbox.checked) {
+          this.selectedAudioSourceIDs.add(persistentID);
+        } else {
+          this.selectedAudioSourceIDs.delete(persistentID);
+        }
+      }
+    });
+
+    this.native.getAudioSources().then((audioSources: AudioSource[]) => {
+      this.selectedAudioSourceIDs.clear();
+      for (const audioSource of audioSources) {
+        this.selectedAudioSourceIDs.add(audioSource.persistentID);
+      }
+      return this.updateAudioSources();
+    });
+  }
+
   initProcessButton() {
     document.getElementById('process-button').onclick = () => {
-      if (this.processing) {
-        this.handleCancel();
-      } else {
-        this.handleProcess();
-      }
+      if (!this.processing) return;
+      this.handleCancel();
     };
 
     document.getElementById('process-button').onmouseover = () => {
@@ -67,6 +89,11 @@ export default class App {
 
     document.getElementById('process-button').onmouseout = () => {
       this.hideCancel();
+    };
+
+    document.getElementById('process-modal-confirm').onclick = () => {
+      if (this.processing) return;
+      this.handleProcess();
     };
   }
 
@@ -88,7 +115,9 @@ export default class App {
   }
 
   initNativeEvents() {
-    window.__JUCE__.backend.addEventListener('audioSourceContentUpdated', this.handleAudioSourceUpdate.bind(this));
+    window.__JUCE__.backend.addEventListener('audioSourceAdded', this.handleAudioSourceAdded.bind(this));
+    window.__JUCE__.backend.addEventListener('audioSourceRemoved', this.handleAudioSourceRemoved.bind(this));
+    window.__JUCE__.backend.addEventListener('audioSourceContentUpdated', this.handleAudioSourceUpdated.bind(this));
   }
 
   startPolling() {
@@ -182,13 +211,26 @@ export default class App {
     });
   }
 
-  handleAudioSourceUpdate(event: { persistentID: string }) {
+  handleAudioSourceAdded(event: { persistentID: string }) {
+    this.selectedAudioSourceIDs.add(event.persistentID);
+    return this.updateAudioSources();
+  }
+
+  handleAudioSourceRemoved(event: { persistentID: string }) {
+    this.selectedAudioSourceIDs.delete(event.persistentID);
+    return this.updateAudioSources();
+  }
+
+  handleAudioSourceUpdated(event: { persistentID: string }) {
     return this.native.getAudioSources().then((audioSources: AudioSource[]) => {
       for (const audioSource of audioSources) {
         if (audioSource.persistentID === event.persistentID) {
           return this.mergeTranscript(audioSource);
         }
       }
+    }).then(() => {
+      this.selectedAudioSourceIDs.delete(event.persistentID);
+      return this.updateAudioSources();
     });
   }
 
@@ -210,11 +252,11 @@ export default class App {
   }
 
   handleProcess() {
-    this.processing = true;
+    this.setProcessing(true);
     this.showSpinner();
     this.setProcessText('Processing...');
-    this.clearTranscript();
-    this.hideTranscript();
+    // this.clearTranscript();
+    // this.hideTranscript();
 
     const languageSelect = document.getElementById('language-select') as HTMLSelectElement;
     const languageCode = languageSelect.options[languageSelect.selectedIndex].value;
@@ -226,9 +268,13 @@ export default class App {
     };
 
     return this.native.getAudioSources().then((audioSources: AudioSource[]) => {
+      audioSources = audioSources.filter((audioSource) => {
+        return this.selectedAudioSourceIDs.has(audioSource.persistentID);
+      });
+
       const processNextAudioSource = () => {
         if (audioSources.length === 0) {
-          this.processing = false;
+          this.setProcessing(false);
           this.setProcessText('Process');
           this.hideCancel();
           this.hideSpinner();
@@ -259,7 +305,7 @@ export default class App {
   }
 
   handleCancel(retriesLeft = 100) {
-    this.processing = false;
+    this.setProcessing(false);
     this.hideCancel();
     this.hideSpinner();
     this.hideTranscript();
@@ -321,6 +367,29 @@ export default class App {
     ]);
   }
 
+  updateAudioSources() {
+    return this.native.getAudioSources().then((audioSources: AudioSource[]) => {
+      const table = document.querySelector('#audio-sources table');
+      const tbody = table.querySelector('tbody');
+      tbody.innerHTML = ''; // Clear existing rows
+      audioSources.forEach((audioSource) => {
+        const row = document.createElement('tr');
+        const isChecked = this.selectedAudioSourceIDs.has(audioSource.persistentID);
+        row.innerHTML = `
+          <td><input type="checkbox" class="form-check-input selected-audio-source-id" value="${audioSource.persistentID}" ${isChecked ? 'checked' : ''}></td>
+          <td>${htmlEscape(audioSource.name)}</td>
+          <td>${timestampToString(audioSource.duration)}</td>
+        `;
+        tbody.appendChild(row);
+      });
+      if (audioSources.length === 0) {
+        const row = document.createElement('tr');
+        row.innerHTML = '<td colspan="3" class="text-center">No audio sources found</td>';
+        tbody.appendChild(row);
+      }
+    });
+  }
+
   updateTranscriptionStatus() {
     if (!this.processing) {
       this.setProgress(0);
@@ -358,6 +427,17 @@ export default class App {
       }
     }
     return result;
+  }
+
+  setProcessing(processing: boolean) {
+    this.processing = processing;
+
+    const processButton = document.getElementById('process-button') as HTMLElement;
+    if (processing) {
+      processButton.removeAttribute('data-bs-toggle');
+    } else {
+      processButton.setAttribute('data-bs-toggle', 'modal');
+    }
   }
 
   setProcessText(text) {
