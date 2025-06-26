@@ -377,7 +377,7 @@ export default class App {
         const isChecked = this.selectedAudioSourceIDs.has(audioSource.persistentID);
         row.innerHTML = `
           <td><input type="checkbox" class="form-check-input selected-audio-source-id" value="${audioSource.persistentID}" ${isChecked ? 'checked' : ''}></td>
-          <td>${htmlEscape(audioSource.name)}</td>
+          <td class="text-truncate" style="max-width: 250px" title="${htmlEscape(audioSource.name)}">${htmlEscape(audioSource.name)}</td>
           <td>${timestampToString(audioSource.duration)}</td>
         `;
         tbody.appendChild(row);
