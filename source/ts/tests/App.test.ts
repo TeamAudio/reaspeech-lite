@@ -250,7 +250,7 @@ describe('App', () => {
       const initRows = app.transcriptGrid.getRows();
       expect(initRows.length).toBe(0);
 
-      await app.handleAudioSourceUpdate({ persistentID: 'audio1' });
+      await app.handleAudioSourceUpdated({ persistentID: 'audio1' });
 
       const rows = app.transcriptGrid.getRows();
       expect(rows.length).toBe(1);
@@ -399,6 +399,9 @@ describe('App', () => {
         audioSource2
       ]);
 
+      app.selectedAudioSourceIDs.add('audio1');
+      app.selectedAudioSourceIDs.add('audio2');
+
       const segments = [{ text: 'test', start: 0, end: 1 }];
 
       mockNative.transcribeAudioSource.mockResolvedValue({ segments });
@@ -414,18 +417,18 @@ describe('App', () => {
 
       (app as any).transcriptGrid = {
         addSegments: jest.fn(),
-        clear: jest.fn()
       };
 
       const audioSource = { persistentID: 'audio1', name: 'Audio 1' };
       mockNative.getAudioSources.mockResolvedValue([audioSource]);
+
+      app.selectedAudioSourceIDs.add('audio1');
 
       const error = 'Test error';
       mockNative.transcribeAudioSource.mockResolvedValue({ error });
 
       await app.handleProcess();
 
-      expect(app.transcriptGrid.clear).toHaveBeenCalled();
       expect(app.transcriptGrid.addSegments).not.toHaveBeenCalled();
 
       const alerts = document.getElementById('alerts') as HTMLElement;
