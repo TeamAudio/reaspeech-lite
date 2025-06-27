@@ -1,43 +1,18 @@
+import * as GridConfig from './GridConfig';
 import { AudioSource, PlaybackRegion } from './ARA';
 import { Segment } from './ASR';
 import { downloadFile, htmlEscape, timestampToString, timestampToStringSRT } from './Utils';
 
 import {
   CellClickedEvent,
-  ClientSideRowModelApiModule,
-  ClientSideRowModelModule,
   ColDef,
-  CsvExportModule,
   CsvExportParams,
   GridApi,
   GridOptions,
   ICellRendererParams,
-  ModuleRegistry,
   ProcessCellForExportParams,
-  QuickFilterModule,
-  RowApiModule,
-  RowSelectionModule,
-  RowStyleModule,
-  ScrollApiModule,
-  TextFilterModule,
-  ValidationModule,
-  colorSchemeDark,
   createGrid,
-  themeQuartz as theme,
 } from "ag-grid-community";
-
-ModuleRegistry.registerModules([
-  ClientSideRowModelApiModule,
-  ClientSideRowModelModule,
-  CsvExportModule,
-  QuickFilterModule,
-  RowApiModule,
-  RowSelectionModule,
-  RowStyleModule,
-  ScrollApiModule,
-  TextFilterModule,
-  ValidationModule,
-]);
 
 interface TranscriptRow extends Segment {
   id: string;
@@ -194,19 +169,8 @@ export default class TranscriptGrid {
       rowHeight: 32,
       rowSelection: { mode: 'singleRow', checkboxes: false },
       suppressCellFocus: true,
-
-      theme: theme.withPart(colorSchemeDark).withParams({
-        borderColor: '#4C545B',
-        headerBackgroundColor: '#212529',
-      }),
-
-      getRowStyle: (params) => {
-        if (params.node.rowIndex % 2 === 0) {
-          return { background: '#2C3035' }
-        } else {
-          return { background: '#212529' }
-        }
-      },
+      theme: GridConfig.getTheme(),
+      getRowStyle: GridConfig.stripedRowStyle,
     };
   }
 

@@ -1,7 +1,8 @@
+import AudioSourceGrid from './AudioSourceGrid';
 import Native from './Native';
 import TranscriptGrid from './TranscriptGrid';
 import { AudioSource, PlaybackRegion, RegionSequence } from './ARA';
-import { delay, htmlEscape, timestampToString } from './Utils';
+import { delay, htmlEscape } from './Utils';
 
 declare global {
   interface Window {
@@ -21,8 +22,9 @@ export default class App {
   private native: Native;
 
   processing: boolean = false;
-  selectedAudioSourceIDs: Set<string> = new Set();
   state: any;
+
+  audioSourceGrid: AudioSourceGrid;
   transcriptGrid: TranscriptGrid;
 
   constructor() {
@@ -55,24 +57,9 @@ export default class App {
   }
 
   initAudioSources() {
-    document.querySelector('#audio-sources').addEventListener('click', (event) => {
-      if ((event.target as HTMLElement).matches('.selected-audio-source-id')) {
-        const checkbox = event.target as HTMLInputElement;
-        const persistentID = checkbox.value;
-        if (checkbox.checked) {
-          this.selectedAudioSourceIDs.add(persistentID);
-        } else {
-          this.selectedAudioSourceIDs.delete(persistentID);
-        }
-      }
-    });
-
-    this.native.getAudioSources().then((audioSources: AudioSource[]) => {
-      this.selectedAudioSourceIDs.clear();
-      for (const audioSource of audioSources) {
-        this.selectedAudioSourceIDs.add(audioSource.persistentID);
-      }
-      return this.updateAudioSources();
+    this.audioSourceGrid = new AudioSourceGrid('#audio-source-grid');
+    this.updateAudioSources().then(() => {
+      this.audioSourceGrid.selectAll();
     });
   }
 
@@ -212,12 +199,12 @@ export default class App {
   }
 
   handleAudioSourceAdded(event: { persistentID: string }) {
-    this.selectedAudioSourceIDs.add(event.persistentID);
-    return this.updateAudioSources();
+    return this.updateAudioSources().then(() => {
+      this.audioSourceGrid.setRowSelected(event.persistentID, true);
+    });
   }
 
   handleAudioSourceRemoved(event: { persistentID: string }) {
-    this.selectedAudioSourceIDs.delete(event.persistentID);
     return this.updateAudioSources();
   }
 
@@ -229,8 +216,9 @@ export default class App {
         }
       }
     }).then(() => {
-      this.selectedAudioSourceIDs.delete(event.persistentID);
-      return this.updateAudioSources();
+      return this.updateAudioSources().then(() => {
+        this.audioSourceGrid.setRowSelected(event.persistentID, false);
+      });
     });
   }
 
@@ -255,8 +243,6 @@ export default class App {
     this.setProcessing(true);
     this.showSpinner();
     this.setProcessText('Processing...');
-    // this.clearTranscript();
-    // this.hideTranscript();
 
     const languageSelect = document.getElementById('language-select') as HTMLSelectElement;
     const languageCode = languageSelect.options[languageSelect.selectedIndex].value;
@@ -267,9 +253,11 @@ export default class App {
       translate: translate
     };
 
+    const selectedAudioSourceIds = new Set(this.audioSourceGrid.getSelectedRowIds());
+
     return this.native.getAudioSources().then((audioSources: AudioSource[]) => {
       audioSources = audioSources.filter((audioSource) => {
-        return this.selectedAudioSourceIDs.has(audioSource.persistentID);
+        return selectedAudioSourceIds.has(audioSource.persistentID);
       });
 
       const processNextAudioSource = () => {
@@ -368,25 +356,11 @@ export default class App {
   }
 
   updateAudioSources() {
+    const selectedRowIds = this.audioSourceGrid.getSelectedRowIds();
     return this.native.getAudioSources().then((audioSources: AudioSource[]) => {
-      const table = document.querySelector('#audio-sources table');
-      const tbody = table.querySelector('tbody');
-      tbody.innerHTML = ''; // Clear existing rows
-      audioSources.forEach((audioSource) => {
-        const row = document.createElement('tr');
-        const isChecked = this.selectedAudioSourceIDs.has(audioSource.persistentID);
-        row.innerHTML = `
-          <td><input type="checkbox" class="form-check-input selected-audio-source-id" value="${audioSource.persistentID}" ${isChecked ? 'checked' : ''}></td>
-          <td class="text-truncate" style="max-width: 250px" title="${htmlEscape(audioSource.name)}">${htmlEscape(audioSource.name)}</td>
-          <td>${timestampToString(audioSource.duration)}</td>
-        `;
-        tbody.appendChild(row);
-      });
-      if (audioSources.length === 0) {
-        const row = document.createElement('tr');
-        row.innerHTML = '<td colspan="3" class="text-center">No audio sources found</td>';
-        tbody.appendChild(row);
-      }
+      this.audioSourceGrid.clear();
+      this.audioSourceGrid.addRows(audioSources);
+      this.audioSourceGrid.setSelectedRowIds(selectedRowIds);
     });
   }
 

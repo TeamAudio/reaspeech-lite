@@ -235,6 +235,14 @@ describe('App', () => {
     it('handles audio source update', async () => {
       const app = new App();
 
+      (app as any).audioSourceGrid = {
+        addRows: jest.fn(),
+        clear: jest.fn(),
+        setRowSelected: jest.fn(),
+        getSelectedRowIds: jest.fn().mockReturnValue(['audio1']),
+        setSelectedRowIds: jest.fn(),
+      };
+
       mockNative.getAudioSourceTranscript
         .mockResolvedValueOnce({})
         .mockResolvedValueOnce({
@@ -259,6 +267,15 @@ describe('App', () => {
       expect(rows[0].text).toBe('test');
       expect(rows[0].source).toBe('Audio 1');
       expect(rows[0].sourceID).toBe('audio1');
+
+      expect(app.audioSourceGrid.clear).toHaveBeenCalled();
+      expect(app.audioSourceGrid.addRows).toHaveBeenCalledWith([
+        { persistentID: 'audio1', name: 'Audio 1' }
+      ]);
+      // First, audio1 is expected to be selected, as we restore selection state
+      expect(app.audioSourceGrid.setSelectedRowIds).toHaveBeenCalledWith(['audio1']);
+      // Then, audio1 is expected to be deselected, since its transcription is done
+      expect(app.audioSourceGrid.setRowSelected).toHaveBeenCalledWith('audio1', false);
     });
   });
 
@@ -386,9 +403,13 @@ describe('App', () => {
     it('handles process button click', async () => {
       const app = new App();
 
+      (app as any).audioSourceGrid = {
+        getSelectedRowIds: jest.fn().mockReturnValue(['audio1', 'audio2']),
+      };
+
       (app as any).transcriptGrid = {
         addSegments: jest.fn(),
-        clear: jest.fn()
+        clear: jest.fn(),
       };
 
       const audioSource1 = { persistentID: 'audio1', name: 'Audio 1' };
@@ -398,9 +419,6 @@ describe('App', () => {
         audioSource1,
         audioSource2
       ]);
-
-      app.selectedAudioSourceIDs.add('audio1');
-      app.selectedAudioSourceIDs.add('audio2');
 
       const segments = [{ text: 'test', start: 0, end: 1 }];
 
@@ -415,14 +433,16 @@ describe('App', () => {
     it('handles process errors', async () => {
       const app = new App();
 
+      (app as any).audioSourceGrid = {
+        getSelectedRowIds: jest.fn().mockReturnValue(['audio1']),
+      };
+
       (app as any).transcriptGrid = {
         addSegments: jest.fn(),
       };
 
       const audioSource = { persistentID: 'audio1', name: 'Audio 1' };
       mockNative.getAudioSources.mockResolvedValue([audioSource]);
-
-      app.selectedAudioSourceIDs.add('audio1');
 
       const error = 'Test error';
       mockNative.transcribeAudioSource.mockResolvedValue({ error });
