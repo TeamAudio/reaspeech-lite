@@ -106,10 +106,6 @@ export default class AudioSourceGrid {
   }
 
   renderDuration(params: ICellRendererParams) {
-    const time = params.value;
-    if (time === null) {
-      return '';
-    }
-    return timestampToString(time);
+    return timestampToString(params.value);
   }
 }
