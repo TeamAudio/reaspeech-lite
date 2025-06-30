@@ -29,6 +29,7 @@ ModuleRegistry.registerModules([
 
 export function getTheme() {
   return theme.withPart(colorSchemeDark).withParams({
+    backgroundColor: '#2C3035',
     borderColor: '#4C545B',
     headerBackgroundColor: '#212529',
   })
