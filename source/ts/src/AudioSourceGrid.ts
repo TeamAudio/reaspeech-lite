@@ -63,6 +63,7 @@ export default class AudioSourceGrid {
       rowHeight: 32,
       rowSelection: { mode: 'multiRow', checkboxes: true, headerCheckbox: true },
       suppressCellFocus: true,
+      suppressDragLeaveHidesColumns: true,
       theme: GridConfig.getTheme(),
     };
   }
