@@ -50,7 +50,7 @@ export default class App {
     this.loadState().then(() => {
       this.initModels();
       this.initLanguages();
-      this.initTranscriptGrid();
+      this.initTranscript();
     });
   }
 
@@ -205,7 +205,7 @@ export default class App {
     });
   }
 
-  initTranscriptGrid() {
+  initTranscript() {
     this.transcriptGrid = new TranscriptGrid('#transcript-grid', (seconds) => this.playAt(seconds));
     return this.native.getAudioSources().then((audioSources: AudioSource[]) => {
       const promises = audioSources.map((audioSource) => {
@@ -377,7 +377,9 @@ export default class App {
     return this.native.getAudioSources().then((audioSources: AudioSource[]) => {
       this.audioSourceGrid.clear();
       this.audioSourceGrid.addRows(audioSources);
-      this.audioSourceGrid.setSelectedRowIds(selectedRowIds);
+      this.audioSourceGrid.setSelectedRowIds(selectedRowIds.filter((id) => {
+        return audioSources.some((audioSource) => audioSource.persistentID === id);
+      }));
     });
   }
 
