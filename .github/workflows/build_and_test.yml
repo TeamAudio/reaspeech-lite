@@ -57,14 +57,15 @@ jobs:
             os: windows-latest
             cuda: true
             cuda-version: '12.4.0'
+            release-only: true
             extra-flags: -DGGML_CUDA=1 -DGGML_STATIC=1 -DCMAKE_CUDA_ARCHITECTURES=all
 
     steps:
       - name: Check if build should be skipped
         run: |
-          if [[ "${{ matrix.cuda }}" == "true" && "${{ github.ref }}" != *"tags/v"* ]]; then
+          if [[ "${{ matrix.release-only }}" == "true" && "${{ github.ref }}" != *"tags/v"* ]]; then
             echo "SHOULD_SKIP=true" >> $GITHUB_ENV
-            echo "::notice::CUDA build '${{ matrix.name }}' will be skipped - only runs on releases (tags starting with 'v')"
+            echo "::notice::Build '${{ matrix.name }}' will be skipped - only runs on releases (tags starting with 'v')"
           fi
 
       # Set up MSVC toolchain and developer command prompt (Windows)
