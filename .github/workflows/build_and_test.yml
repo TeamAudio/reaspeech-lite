@@ -41,11 +41,6 @@ jobs:
             os: ubuntu-22.04
             pluginval-binary: ./pluginval
             extra-flags: -G Ninja
-          - name: LinuxCUDA
-            os: ubuntu-22.04
-            cuda: true
-            cuda-version: '12.4.0'
-            extra-flags: -G Ninja -DGGML_CUDA=1 -DCMAKE_CUDA_ARCHITECTURES=all
           - name: macOS
             os: macos-14
             pluginval-binary: pluginval.app/Contents/MacOS/pluginval
@@ -57,21 +52,16 @@ jobs:
             os: windows-latest
             cuda: true
             cuda-version: '12.4.0'
+            release-only: true
             extra-flags: -DGGML_CUDA=1 -DGGML_STATIC=1 -DCMAKE_CUDA_ARCHITECTURES=all
 
     steps:
       - name: Check if build should be skipped
         run: |
-          if [[ "${{ matrix.cuda }}" == "true" && "${{ github.ref }}" != *"tags/v"* ]]; then
+          if [[ "${{ matrix.release-only }}" == "true" && "${{ github.ref }}" != *"tags/v"* ]]; then
             echo "SHOULD_SKIP=true" >> $GITHUB_ENV
-            echo "::notice::CUDA build '${{ matrix.name }}' will be skipped - only runs on releases (tags starting with 'v')"
+            echo "::notice::Build '${{ matrix.name }}' will be skipped - only runs on releases (tags starting with 'v')"
           fi
-
-      - name: Maximize build space
-        if: env.SHOULD_SKIP != 'true' && runner.os == 'Linux'
-        uses: easimon/maximize-build-space@v10
-        with:
-          root-reserve-mb: 20000
 
       # Set up MSVC toolchain and developer command prompt (Windows)
       - name: Set up MSVC
