@@ -93,7 +93,7 @@ describe('App', () => {
         { persistentID: 'audio1', name: 'Audio 1' }
       ]);
 
-      await app.initTranscriptGrid();
+      await app.initTranscript();
 
       const rows = app.transcriptGrid.getRows();
       expect(rows.length).toBe(1);
@@ -145,6 +145,24 @@ describe('App', () => {
 
       const alerts = document.getElementById('alerts') as HTMLElement;
       expect(alerts.innerHTML).toContain('Failed to read project data');
+    });
+
+    it('migrates transcripts from state to audio sources', async () => {
+      window.__JUCE__.initialisationData.webState = [JSON.stringify({
+        transcript: {
+        groups: [{
+          segments: [{ text: 'test', start: 0, end: 1 }],
+          audioSource: { persistentID: 'audio1', name: 'Audio 1' }
+        }]
+      }})];
+
+      const app = new App();
+      await app.loadState();
+
+      expect(mockNative.setAudioSourceTranscript).toHaveBeenCalledWith('audio1', {
+        segments: [{ text: 'test', start: 0, end: 1 }]
+      });
+      expect(app.state.transcript).toBeUndefined();
     });
 
     it('saves state', async () => {
@@ -232,8 +250,68 @@ describe('App', () => {
       mockSaveState.mockRestore();
     });
 
+    it('handles audio source addition', async () => {
+      const app = new App();
+
+      (app as any).audioSourceGrid = {
+        addRows: jest.fn(),
+        clear: jest.fn(),
+        setRowSelected: jest.fn(),
+        getSelectedRowIds: jest.fn().mockReturnValue(['audio1']),
+        setSelectedRowIds: jest.fn(),
+      };
+
+      mockNative.getAudioSources.mockResolvedValue([
+        { persistentID: 'audio1', name: 'Audio 1' },
+        { persistentID: 'audio2', name: 'Audio 2' }
+      ]);
+
+      await app.handleAudioSourceAdded({persistentID: 'audio2'});
+
+      expect(app.audioSourceGrid.clear).toHaveBeenCalled();
+      expect(app.audioSourceGrid.addRows).toHaveBeenCalledWith([
+        { persistentID: 'audio1', name: 'Audio 1' },
+        { persistentID: 'audio2', name: 'Audio 2' }
+      ]);
+      expect(app.audioSourceGrid.setSelectedRowIds).toHaveBeenCalledWith(['audio1']);
+      expect(app.audioSourceGrid.setRowSelected).toHaveBeenCalledWith('audio2', true);
+    });
+
+    it('handles audio source removal', async () => {
+      const app = new App();
+
+      (app as any).audioSourceGrid = {
+        addRows: jest.fn(),
+        clear: jest.fn(),
+        setRowSelected: jest.fn(),
+        getSelectedRowIds: jest.fn().mockReturnValue(['audio1', 'audio2']),
+        setSelectedRowIds: jest.fn(),
+      };
+
+      mockNative.getAudioSources.mockResolvedValue([
+        { persistentID: 'audio1', name: 'Audio 1' }
+      ]);
+
+      await app.handleAudioSourceRemoved({persistentID: 'audio2'});
+
+      expect(app.audioSourceGrid.clear).toHaveBeenCalled();
+      expect(app.audioSourceGrid.addRows).toHaveBeenCalledWith([
+        { persistentID: 'audio1', name: 'Audio 1' }
+      ]);
+      expect(app.audioSourceGrid.setSelectedRowIds).toHaveBeenCalledWith(['audio1']);
+      expect(app.audioSourceGrid.setRowSelected).not.toHaveBeenCalled();
+    });
+
     it('handles audio source update', async () => {
       const app = new App();
+
+      (app as any).audioSourceGrid = {
+        addRows: jest.fn(),
+        clear: jest.fn(),
+        setRowSelected: jest.fn(),
+        getSelectedRowIds: jest.fn().mockReturnValue(['audio1']),
+        setSelectedRowIds: jest.fn(),
+      };
 
       mockNative.getAudioSourceTranscript
         .mockResolvedValueOnce({})
@@ -245,12 +323,12 @@ describe('App', () => {
         { persistentID: 'audio1', name: 'Audio 1' }
       ]);
 
-      await app.initTranscriptGrid();
+      await app.initTranscript();
 
       const initRows = app.transcriptGrid.getRows();
       expect(initRows.length).toBe(0);
 
-      await app.handleAudioSourceUpdate({ persistentID: 'audio1' });
+      await app.handleAudioSourceUpdated({ persistentID: 'audio1' });
 
       const rows = app.transcriptGrid.getRows();
       expect(rows.length).toBe(1);
@@ -259,6 +337,15 @@ describe('App', () => {
       expect(rows[0].text).toBe('test');
       expect(rows[0].source).toBe('Audio 1');
       expect(rows[0].sourceID).toBe('audio1');
+
+      expect(app.audioSourceGrid.clear).toHaveBeenCalled();
+      expect(app.audioSourceGrid.addRows).toHaveBeenCalledWith([
+        { persistentID: 'audio1', name: 'Audio 1' }
+      ]);
+      // First, audio1 is expected to be selected, as we restore selection state
+      expect(app.audioSourceGrid.setSelectedRowIds).toHaveBeenCalledWith(['audio1']);
+      // Then, audio1 is expected to be deselected, since its transcription is done
+      expect(app.audioSourceGrid.setRowSelected).toHaveBeenCalledWith('audio1', false);
     });
   });
 
@@ -386,9 +473,13 @@ describe('App', () => {
     it('handles process button click', async () => {
       const app = new App();
 
+      (app as any).audioSourceGrid = {
+        getSelectedRowIds: jest.fn().mockReturnValue(['audio1', 'audio2']),
+      };
+
       (app as any).transcriptGrid = {
         addSegments: jest.fn(),
-        clear: jest.fn()
+        clear: jest.fn(),
       };
 
       const audioSource1 = { persistentID: 'audio1', name: 'Audio 1' };
@@ -412,9 +503,12 @@ describe('App', () => {
     it('handles process errors', async () => {
       const app = new App();
 
+      (app as any).audioSourceGrid = {
+        getSelectedRowIds: jest.fn().mockReturnValue(['audio1']),
+      };
+
       (app as any).transcriptGrid = {
         addSegments: jest.fn(),
-        clear: jest.fn()
       };
 
       const audioSource = { persistentID: 'audio1', name: 'Audio 1' };
@@ -425,7 +519,6 @@ describe('App', () => {
 
       await app.handleProcess();
 
-      expect(app.transcriptGrid.clear).toHaveBeenCalled();
       expect(app.transcriptGrid.addSegments).not.toHaveBeenCalled();
 
       const alerts = document.getElementById('alerts') as HTMLElement;

@@ -40,22 +40,25 @@ private:
     void didAddAudioSourceToDocument (juce::ARADocument*, juce::ARAAudioSource* audioSource) override
     {
         audioSource->addListener (this);
+        emitAudioSourceEvent ("audioSourceAdded", audioSource);
     }
 
     void willRemoveAudioSourceFromDocument (juce::ARADocument*, juce::ARAAudioSource* audioSource) override
     {
         audioSource->removeListener (this);
+        emitAudioSourceEvent ("audioSourceRemoved", audioSource);
     }
 
     void doUpdateAudioSourceContent (juce::ARAAudioSource* audioSource, juce::ARAContentUpdateScopes) override
     {
+        emitAudioSourceEvent ("audioSourceContentUpdated", audioSource);
+    }
+
+    void emitAudioSourceEvent (const juce::String& eventName, juce::ARAAudioSource* audioSource)
+    {
         juce::DynamicObject::Ptr eventObj = new juce::DynamicObject();
         eventObj->setProperty ("persistentID", juce::String (audioSource->getPersistentID()));
-
-        webComponent.emitEventIfBrowserIsVisible (
-            "audioSourceContentUpdated",
-            juce::var (eventObj.get())
-        );
+        webComponent.emitEventIfBrowserIsVisible (eventName, juce::var (eventObj.get()));
     }
 
     juce::ARADocument* getDocument()

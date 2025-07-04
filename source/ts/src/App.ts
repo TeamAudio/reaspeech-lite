@@ -1,3 +1,4 @@
+import AudioSourceGrid from './AudioSourceGrid';
 import Native from './Native';
 import TranscriptGrid from './TranscriptGrid';
 import { AudioSource, PlaybackRegion, RegionSequence } from './ARA';
@@ -19,9 +20,12 @@ declare global {
 
 export default class App {
   private native: Native;
-  public processing: boolean = false;
-  public state: any;
-  public transcriptGrid: TranscriptGrid;
+
+  processing: boolean = false;
+  state: any;
+
+  audioSourceGrid: AudioSourceGrid;
+  transcriptGrid: TranscriptGrid;
 
   constructor() {
     this.native = new Native();
@@ -35,9 +39,8 @@ export default class App {
 
   init() {
     this.initState();
-    this.initProcessButton();
-    this.initCreateButton();
-    this.initExportButton();
+    this.initAudioSources();
+    this.initButtons();
     this.initSearch();
     this.initNativeEvents();
     this.startPolling();
@@ -47,17 +50,28 @@ export default class App {
     this.loadState().then(() => {
       this.initModels();
       this.initLanguages();
-      this.initTranscriptGrid();
+      this.initTranscript();
     });
+  }
+
+  initAudioSources() {
+    this.audioSourceGrid = new AudioSourceGrid('#audio-source-grid');
+    this.updateAudioSources().then(() => {
+      this.audioSourceGrid.selectAll();
+    });
+  }
+
+  initButtons() {
+    this.initProcessButton();
+    this.initClearTranscriptButton();
+    this.initCreateButton();
+    this.initExportButton();
   }
 
   initProcessButton() {
     document.getElementById('process-button').onclick = () => {
-      if (this.processing) {
-        this.handleCancel();
-      } else {
-        this.handleProcess();
-      }
+      if (!this.processing) return;
+      this.handleCancel();
     };
 
     document.getElementById('process-button').onmouseover = () => {
@@ -67,6 +81,23 @@ export default class App {
 
     document.getElementById('process-button').onmouseout = () => {
       this.hideCancel();
+    };
+
+    document.getElementById('process-modal-confirm').onclick = () => {
+      if (this.processing) return;
+      this.handleProcess();
+    };
+  }
+
+  initClearTranscriptButton() {
+    document.getElementById('clear-transcript-modal-confirm').onclick = () => {
+      if (this.processing) {
+        this.showAlert('warning', '<b>Warning:</b> Cannot clear transcript while processing!');
+      } else {
+        this.clearTranscript().then(() => {
+          this.hideTranscript();
+        });
+      }
     };
   }
 
@@ -88,7 +119,9 @@ export default class App {
   }
 
   initNativeEvents() {
-    window.__JUCE__.backend.addEventListener('audioSourceContentUpdated', this.handleAudioSourceUpdate.bind(this));
+    window.__JUCE__.backend.addEventListener('audioSourceAdded', this.handleAudioSourceAdded.bind(this));
+    window.__JUCE__.backend.addEventListener('audioSourceRemoved', this.handleAudioSourceRemoved.bind(this));
+    window.__JUCE__.backend.addEventListener('audioSourceContentUpdated', this.handleAudioSourceUpdated.bind(this));
   }
 
   startPolling() {
@@ -172,7 +205,7 @@ export default class App {
     });
   }
 
-  initTranscriptGrid() {
+  initTranscript() {
     this.transcriptGrid = new TranscriptGrid('#transcript-grid', (seconds) => this.playAt(seconds));
     return this.native.getAudioSources().then((audioSources: AudioSource[]) => {
       const promises = audioSources.map((audioSource) => {
@@ -182,13 +215,27 @@ export default class App {
     });
   }
 
-  handleAudioSourceUpdate(event: { persistentID: string }) {
+  handleAudioSourceAdded(event: { persistentID: string }) {
+    return this.updateAudioSources().then(() => {
+      this.audioSourceGrid.setRowSelected(event.persistentID, true);
+    });
+  }
+
+  handleAudioSourceRemoved(event: { persistentID: string }) {
+    return this.updateAudioSources();
+  }
+
+  handleAudioSourceUpdated(event: { persistentID: string }) {
     return this.native.getAudioSources().then((audioSources: AudioSource[]) => {
       for (const audioSource of audioSources) {
         if (audioSource.persistentID === event.persistentID) {
           return this.mergeTranscript(audioSource);
         }
       }
+    }).then(() => {
+      return this.updateAudioSources().then(() => {
+        this.audioSourceGrid.setRowSelected(event.persistentID, false);
+      });
     });
   }
 
@@ -210,11 +257,9 @@ export default class App {
   }
 
   handleProcess() {
-    this.processing = true;
+    this.setProcessing(true);
     this.showSpinner();
     this.setProcessText('Processing...');
-    this.clearTranscript();
-    this.hideTranscript();
 
     const languageSelect = document.getElementById('language-select') as HTMLSelectElement;
     const languageCode = languageSelect.options[languageSelect.selectedIndex].value;
@@ -225,10 +270,16 @@ export default class App {
       translate: translate
     };
 
+    const selectedAudioSourceIds = new Set(this.audioSourceGrid.getSelectedRowIds());
+
     return this.native.getAudioSources().then((audioSources: AudioSource[]) => {
+      audioSources = audioSources.filter((audioSource) => {
+        return selectedAudioSourceIds.has(audioSource.persistentID);
+      });
+
       const processNextAudioSource = () => {
         if (audioSources.length === 0) {
-          this.processing = false;
+          this.setProcessing(false);
           this.setProcessText('Process');
           this.hideCancel();
           this.hideSpinner();
@@ -259,7 +310,7 @@ export default class App {
   }
 
   handleCancel(retriesLeft = 100) {
-    this.processing = false;
+    this.setProcessing(false);
     this.hideCancel();
     this.hideSpinner();
     this.hideTranscript();
@@ -321,6 +372,17 @@ export default class App {
     ]);
   }
 
+  updateAudioSources() {
+    const selectedRowIds = this.audioSourceGrid.getSelectedRowIds();
+    return this.native.getAudioSources().then((audioSources: AudioSource[]) => {
+      this.audioSourceGrid.clear();
+      this.audioSourceGrid.addRows(audioSources);
+      this.audioSourceGrid.setSelectedRowIds(selectedRowIds.filter((id) => {
+        return audioSources.some((audioSource) => audioSource.persistentID === id);
+      }));
+    });
+  }
+
   updateTranscriptionStatus() {
     if (!this.processing) {
       this.setProgress(0);
@@ -358,6 +420,17 @@ export default class App {
       }
     }
     return result;
+  }
+
+  setProcessing(processing: boolean) {
+    this.processing = processing;
+
+    const processButton = document.getElementById('process-button') as HTMLElement;
+    if (processing) {
+      processButton.removeAttribute('data-bs-toggle');
+    } else {
+      processButton.setAttribute('data-bs-toggle', 'modal');
+    }
   }
 
   setProcessText(text) {
