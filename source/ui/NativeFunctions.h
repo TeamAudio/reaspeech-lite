@@ -53,6 +53,7 @@ public:
             .withNativeFunction ("getAudioSourceTranscript", bindFn (&NativeFunctions::getAudioSourceTranscript))
             .withNativeFunction ("getModels", bindFn (&NativeFunctions::getModels))
             .withNativeFunction ("getPlayHeadState", bindFn (&NativeFunctions::getPlayHeadState))
+            .withNativeFunction ("getProcessingTime", bindFn (&NativeFunctions::getProcessingTime))
             .withNativeFunction ("getRegionSequences", bindFn (&NativeFunctions::getRegionSequences))
             .withNativeFunction ("getTranscriptionStatus", bindFn (&NativeFunctions::getTranscriptionStatus))
             .withNativeFunction ("getWhisperLanguages", bindFn (&NativeFunctions::getWhisperLanguages))
@@ -60,6 +61,7 @@ public:
             .withNativeFunction ("stop", bindFn (&NativeFunctions::stop))
             .withNativeFunction ("saveFile", bindFn (&NativeFunctions::saveFile))
             .withNativeFunction ("setAudioSourceTranscript", bindFn (&NativeFunctions::setAudioSourceTranscript))
+            .withNativeFunction ("setDebugMode", bindFn (&NativeFunctions::setDebugMode))
             .withNativeFunction ("setPlaybackPosition", bindFn (&NativeFunctions::setPlaybackPosition))
             .withNativeFunction ("setWebState", bindFn (&NativeFunctions::setWebState))
             .withNativeFunction ("transcribeAudioSource", bindFn (&NativeFunctions::transcribeAudioSource));
@@ -444,6 +446,23 @@ public:
         complete (makeError ("Audio source not found"));
     }
 
+    void setDebugMode (const juce::var& args, std::function<void (const juce::var&)> complete)
+    {
+        if (!args.isBool())
+        {
+            complete (makeError ("Invalid arguments"));
+            return;
+        }
+
+        debugMode.store (args);
+        complete (juce::var());
+    }
+
+    void getProcessingTime (const juce::var&, std::function<void (const juce::var&)> complete)
+    {
+        complete (juce::var (asrEngine->getProcessingTime()));
+    }
+
 private:
     ReaSpeechLiteDocumentController* getDocumentController()
     {
@@ -577,6 +596,7 @@ private:
 
     std::unique_ptr<ASREngine> asrEngine;
     std::atomic<ASRThreadPoolJobStatus> asrStatus;
+    std::atomic<bool> debugMode { false };
     juce::ThreadPool threadPool { 1 };
 
     std::unique_ptr<juce::FileChooser> fileChooser;
