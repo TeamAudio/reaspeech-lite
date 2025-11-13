@@ -34,6 +34,7 @@ export default class App {
       modelName: 'small',
       language: '',
       translate: false,
+      debug: false,
     };
   }
 
@@ -202,6 +203,10 @@ export default class App {
       const translateCheckbox = document.getElementById('translate-checkbox') as HTMLInputElement;
       translateCheckbox.checked = this.state.translate;
       translateCheckbox.onchange = this.handleTranslateChange.bind(this);
+
+      const debugCheckbox = document.getElementById('debug-checkbox') as HTMLInputElement;
+      debugCheckbox.checked = this.state.debug;
+      debugCheckbox.onchange = this.handleDebugChange.bind(this);
     });
   }
 
@@ -256,6 +261,13 @@ export default class App {
     return this.saveState();
   }
 
+  handleDebugChange() {
+    this.state.debug = (document.getElementById('debug-checkbox') as HTMLInputElement).checked;
+    return this.native.setDebugMode(this.state.debug).then(() => {
+      return this.saveState();
+    });
+  }
+
   handleProcess() {
     this.setProcessing(true);
     this.showSpinner();
@@ -280,9 +292,18 @@ export default class App {
       const processNextAudioSource = () => {
         if (audioSources.length === 0) {
           this.setProcessing(false);
-          this.setProcessText('Process');
           this.hideCancel();
           this.hideSpinner();
+
+          // Display processing time
+          this.native.getProcessingTime().then((time: number) => {
+            if (time > 0) {
+              this.setProcessText(`Process (${time.toFixed(1)}s)`);
+            } else {
+              this.setProcessText('Process');
+            }
+          });
+
           return Promise.resolve();
         }
 

@@ -8,6 +8,7 @@ export default class Native {
   getAudioSourceTranscript = Juce.getNativeFunction("getAudioSourceTranscript");
   getModels = Juce.getNativeFunction("getModels");
   getPlayHeadState = Juce.getNativeFunction("getPlayHeadState");
+  getProcessingTime = Juce.getNativeFunction("getProcessingTime");
   getRegionSequences = Juce.getNativeFunction("getRegionSequences");
   getTranscriptionStatus = Juce.getNativeFunction("getTranscriptionStatus");
   getWhisperLanguages = Juce.getNativeFunction("getWhisperLanguages");
@@ -15,6 +16,7 @@ export default class Native {
   stop = Juce.getNativeFunction("stop");
   saveFile = Juce.getNativeFunction("saveFile");
   setAudioSourceTranscript = Juce.getNativeFunction("setAudioSourceTranscript");
+  setDebugMode = Juce.getNativeFunction("setDebugMode");
   setPlaybackPosition = Juce.getNativeFunction("setPlaybackPosition");
   setWebState = Juce.getNativeFunction("setWebState");
   transcribeAudioSource = Juce.getNativeFunction("transcribeAudioSource");

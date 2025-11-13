@@ -155,6 +155,8 @@ public:
             return false;
         }
 
+        auto startTime = juce::Time::getMillisecondCounterHiRes();
+
         TranscribeCallbackData callbackData { this, isAborted };
 
         whisper_full_params params = whisper_full_default_params (WHISPER_SAMPLING_GREEDY);
@@ -223,6 +225,9 @@ public:
             segments.push_back (segment);
         }
 
+        auto endTime = juce::Time::getMillisecondCounterHiRes();
+        processingTimeSeconds.store ((endTime - startTime) / 1000.0);
+
         progress.store (100);
         return true;
     }
@@ -239,6 +244,12 @@ public:
         return progress.load();
     }
 
+    // Get processing time in seconds from last transcription
+    double getProcessingTime() const
+    {
+        return processingTimeSeconds.load();
+    }
+
 private:
     struct TranscribeCallbackData
     {
@@ -251,4 +262,5 @@ private:
     whisper_context* ctx = nullptr;
     std::unique_ptr<juce::URL::DownloadTask> downloadTask;
     std::atomic<int> progress;
+    std::atomic<double> processingTimeSeconds{0.0};
 };

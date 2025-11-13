@@ -38,6 +38,7 @@ struct ReaperProxy
         hasSetMediaItemLength = reaperHost->getReaperApi("SetMediaItemLength");
         hasSetMediaItemPosition = reaperHost->getReaperApi("SetMediaItemPosition");
         hasSetOnlyTrackSelected = reaperHost->getReaperApi("SetOnlyTrackSelected");
+        hasShowConsoleMsg = reaperHost->getReaperApi("ShowConsoleMsg");
         hasUndo_BeginBlock2 = reaperHost->getReaperApi("Undo_BeginBlock2");
         hasUndo_EndBlock2 = reaperHost->getReaperApi("Undo_EndBlock2");
     }
@@ -144,6 +145,12 @@ struct ReaperProxy
     void SetOnlyTrackSelected (MediaTrack* track)
     {
         REAPER_CALL(SetOnlyTrackSelected, void (*) (MediaTrack*), track)
+    }
+
+    void* hasShowConsoleMsg = nullptr;
+    void ShowConsoleMsg (const char* msg)
+    {
+        REAPER_CALL(ShowConsoleMsg, void (*) (const char*), msg)
     }
 
     void* hasUndo_BeginBlock2 = nullptr;
