@@ -203,6 +203,7 @@ public:
 
         DBG(juce::String::formatted("Whisper transcription completed in %.2f seconds (%.2fx realtime)",
                                     processingTime, audioDuration / processingTime));
+        juce::ignoreUnused(audioDuration); // Suppress warning when DBG is disabled
 
         int nSegments = whisper_full_n_segments (ctx);
         DBG ("Number of segments: " + juce::String (nSegments));

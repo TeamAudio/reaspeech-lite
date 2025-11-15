@@ -286,6 +286,7 @@ bool ParakeetEngine::transcribe(
     std::function<bool()> isAborted)
 {
     DBG("ParakeetEngine::transcribe called");
+    juce::ignoreUnused(options); // Options passed to DLL via JSON in impl
 
     if (impl && impl->isLoaded())
     {

@@ -101,18 +101,9 @@ public:
         }
         const auto markerType = *markerTypeOpt;
 
-        // Check for required REAPER API functions based on marker type
-        if (markerType == MarkerType::takemarkers)
+        if (! rpr.hasAddProjectMarker2)
         {
-            if (! rpr.hasSetTakeMarker)
-            {
-                complete (makeError ("SetTakeMarker function not available"));
-                return;
-            }
-        }
-        else if (! rpr.hasAddProjectMarker2)
-        {
-            complete (makeError ("AddProjectMarker2 function not available"));
+            complete (makeError ("Function not available"));
             return;
         }
 
@@ -121,8 +112,6 @@ public:
             {
                 if (markerType == MarkerType::notes)
                     addReaperNotesTrack (markers);
-                else if (markerType == MarkerType::takemarkers)
-                    addReaperTakeMarkers (markers);
                 else
                     addReaperMarkers (markers, markerType);
             }
@@ -518,6 +507,7 @@ public:
 
     void insertAudioAtCursor (const juce::var& args, std::function<void (const juce::var&)> complete)
     {
+        juce::ignoreUnused(args);
         // Stub implementation - full implementation from parakeet branch can be added later
         complete (makeError ("insertAudioAtCursor not yet implemented"));
     }
@@ -611,13 +601,6 @@ private:
         return item;
     }
 
-    void addReaperTakeMarkers (const juce::Array<juce::var>* markers)
-    {
-        // Stub implementation - full implementation can be added later
-        DBG ("addReaperTakeMarkers called but not yet implemented");
-        (void)markers;
-    }
-
     void setReaperNoteText (ReaperProxy::MediaItem* item, const juce::String& text, bool stretch = false)
     {
         char buffer[4096];
@@ -627,9 +610,7 @@ private:
         // This function is currently only used with new items, and the chunk size
         // in that case is currently around 200 bytes. If this changes, the buffer
         // size may need to be increased. The current size is a bit arbitrary.
-        auto chunkSize = static_cast<size_t> (chunk.length());
-        auto bufferSize = sizeof (buffer);
-        jassert (chunkSize < bufferSize - 1);
+        jassert (static_cast<size_t> (chunk.length()) < sizeof (buffer) - 1);
 
         juce::String notesChunk;
         notesChunk << "<NOTES\n|" << text.trim() << "\n>\n";
