@@ -3,18 +3,23 @@
 
 #ifdef _WIN32
 #include <windows.h>
+#elif __APPLE__
+#include <dlfcn.h>
+#include <mach-o/dyld.h>
+#elif __linux__
+#include <dlfcn.h>
+#include <unistd.h>
 #endif
 
-// ParakeetEngineImpl - wrapper that dynamically loads ParakeetEngine.dll
+// ParakeetEngineImpl - wrapper that dynamically loads ParakeetEngine library
 struct ParakeetEngineImpl
 {
-    std::string loadError; // Error message if DLL failed to load
+    std::string loadError; // Error message if library failed to load
 
     ParakeetEngineImpl(const std::string &modelsDirIn)
     {
 #ifdef _WIN32
-        // Load ParakeetEngine.dll from the VST3 bundle directory
-        // The DLL should be in the same directory as the VST3
+        // Windows: Load ParakeetEngine.dll from the VST3 bundle directory
         HMODULE hModule = GetModuleHandleW(nullptr);
         if (hModule)
         {
@@ -79,24 +84,148 @@ struct ParakeetEngineImpl
         {
             DBG("ParakeetEngine.dll loaded successfully");
         }
+#elif __APPLE__
+        // macOS: Load ParakeetEngine.dylib from VST3 bundle Frameworks directory
+        uint32_t bufsize = 4096;
+        char path[4096];
+        if (_NSGetExecutablePath(path, &bufsize) == 0)
+        {
+            // Get the directory containing the VST3
+            std::string pathStr(path);
+            size_t lastSlash = pathStr.find_last_of("/");
+            if (lastSlash != std::string::npos)
+            {
+                // VST3 bundle structure: ReaSpeechLite.vst3/Contents/MacOS/ReaSpeechLite
+                // We need to go to: ReaSpeechLite.vst3/Contents/Frameworks/libParakeetEngine.dylib
+                pathStr = pathStr.substr(0, lastSlash + 1);
+                pathStr += "../Frameworks/libParakeetEngine.dylib";
+
+                DBG("Attempting to load ParakeetEngine.dylib from: " + juce::String(pathStr));
+                dllHandle = dlopen(pathStr.c_str(), RTLD_NOW | RTLD_LOCAL);
+            }
+        }
+
+        if (!dllHandle)
+        {
+            const char* error = dlerror();
+            DBG("Failed to load ParakeetEngine.dylib - Parakeet models will not work");
+            if (error) DBG("dlerror: " + juce::String(error));
+
+            loadError = "Parakeet is not available on this system (missing dependencies). Whisper models will still work normally.";
+            return;
+        }
+
+        // Load function pointers
+        createFunc = (CreateFunc)dlsym(dllHandle, "ParakeetEngine_Create");
+        destroyFunc = (DestroyFunc)dlsym(dllHandle, "ParakeetEngine_Destroy");
+        getLastTranscriptionTimeFunc = (GetLastTranscriptionTimeFunc)dlsym(dllHandle, "ParakeetEngine_GetLastTranscriptionTime");
+        downloadModelFunc = (DownloadModelFunc)dlsym(dllHandle, "ParakeetEngine_DownloadModel");
+        loadModelFunc = (LoadModelFunc)dlsym(dllHandle, "ParakeetEngine_LoadModel");
+        transcribeFunc = (TranscribeFunc)dlsym(dllHandle, "ParakeetEngine_Transcribe");
+        getProgressFunc = (GetProgressFunc)dlsym(dllHandle, "ParakeetEngine_GetProgress");
+
+        if (!createFunc || !destroyFunc || !loadModelFunc || !transcribeFunc)
+        {
+            DBG("Failed to load functions from ParakeetEngine.dylib");
+            loadError = "Parakeet is not available (dylib initialization error). Whisper models will still work normally.";
+            dlclose(dllHandle);
+            dllHandle = nullptr;
+            return;
+        }
+
+        // Create engine instance
+        engineHandle = createFunc(modelsDirIn.c_str());
+        if (!engineHandle)
+        {
+            DBG("Failed to create ParakeetEngine instance");
+            loadError = "Parakeet is not available (engine creation failed). Whisper models will still work normally.";
+        }
+        else
+        {
+            DBG("ParakeetEngine.dylib loaded successfully");
+        }
+#elif __linux__
+        // Linux: Load libParakeetEngine.so from VST3 directory
+        char path[4096];
+        ssize_t len = readlink("/proc/self/exe", path, sizeof(path) - 1);
+        if (len != -1)
+        {
+            path[len] = '\0';
+            std::string pathStr(path);
+            size_t lastSlash = pathStr.find_last_of("/");
+            if (lastSlash != std::string::npos)
+            {
+                pathStr = pathStr.substr(0, lastSlash + 1);
+                pathStr += "libParakeetEngine.so";
+
+                DBG("Attempting to load libParakeetEngine.so from: " + juce::String(pathStr));
+                dllHandle = dlopen(pathStr.c_str(), RTLD_NOW | RTLD_LOCAL);
+            }
+        }
+
+        if (!dllHandle)
+        {
+            const char* error = dlerror();
+            DBG("Failed to load libParakeetEngine.so - Parakeet models will not work");
+            if (error) DBG("dlerror: " + juce::String(error));
+
+            loadError = "Parakeet is not available on this system (missing dependencies). Whisper models will still work normally.";
+            return;
+        }
+
+        // Load function pointers
+        createFunc = (CreateFunc)dlsym(dllHandle, "ParakeetEngine_Create");
+        destroyFunc = (DestroyFunc)dlsym(dllHandle, "ParakeetEngine_Destroy");
+        getLastTranscriptionTimeFunc = (GetLastTranscriptionTimeFunc)dlsym(dllHandle, "ParakeetEngine_GetLastTranscriptionTime");
+        downloadModelFunc = (DownloadModelFunc)dlsym(dllHandle, "ParakeetEngine_DownloadModel");
+        loadModelFunc = (LoadModelFunc)dlsym(dllHandle, "ParakeetEngine_LoadModel");
+        transcribeFunc = (TranscribeFunc)dlsym(dllHandle, "ParakeetEngine_Transcribe");
+        getProgressFunc = (GetProgressFunc)dlsym(dllHandle, "ParakeetEngine_GetProgress");
+
+        if (!createFunc || !destroyFunc || !loadModelFunc || !transcribeFunc)
+        {
+            DBG("Failed to load functions from libParakeetEngine.so");
+            loadError = "Parakeet is not available (library initialization error). Whisper models will still work normally.";
+            dlclose(dllHandle);
+            dllHandle = nullptr;
+            return;
+        }
+
+        // Create engine instance
+        engineHandle = createFunc(modelsDirIn.c_str());
+        if (!engineHandle)
+        {
+            DBG("Failed to create ParakeetEngine instance");
+            loadError = "Parakeet is not available (engine creation failed). Whisper models will still work normally.";
+        }
+        else
+        {
+            DBG("libParakeetEngine.so loaded successfully");
+        }
 #else
-        DBG("ParakeetEngine.dll only supported on Windows for now");
-        loadError = "Parakeet is only available on Windows. Whisper models will still work normally.";
+        DBG("ParakeetEngine only supported on Windows, macOS, and Linux");
+        loadError = "Parakeet is not available on this platform. Whisper models will still work normally.";
         (void)modelsDirIn;
 #endif
     }
 
     ~ParakeetEngineImpl()
     {
-#ifdef _WIN32
         if (engineHandle && destroyFunc)
         {
             destroyFunc(engineHandle);
             engineHandle = nullptr;
         }
+#ifdef _WIN32
         if (dllHandle)
         {
             FreeLibrary(dllHandle);
+            dllHandle = nullptr;
+        }
+#elif defined(__APPLE__) || defined(__linux__)
+        if (dllHandle)
+        {
+            dlclose(dllHandle);
             dllHandle = nullptr;
         }
 #endif
@@ -104,7 +233,7 @@ struct ParakeetEngineImpl
 
     bool isLoaded() const
     {
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__APPLE__) || defined(__linux__)
         return dllHandle != nullptr && engineHandle != nullptr;
 #else
         return false;
@@ -113,7 +242,7 @@ struct ParakeetEngineImpl
 
     float getLastTranscriptionTime() const
     {
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__APPLE__) || defined(__linux__)
         if (isLoaded() && getLastTranscriptionTimeFunc)
         {
             return getLastTranscriptionTimeFunc(engineHandle);
@@ -124,7 +253,7 @@ struct ParakeetEngineImpl
 
     bool downloadModel(const std::string &modelName, std::function<bool()> isAborted)
     {
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__APPLE__) || defined(__linux__)
         if (isLoaded() && downloadModelFunc)
         {
             // Create callback wrapper
@@ -146,7 +275,7 @@ struct ParakeetEngineImpl
 
     bool loadModel(const std::string &modelName)
     {
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__APPLE__) || defined(__linux__)
         if (isLoaded() && loadModelFunc)
         {
             return loadModelFunc(engineHandle, modelName.c_str()) != 0;
@@ -162,7 +291,7 @@ struct ParakeetEngineImpl
         std::vector<ASRSegment> &segments,
         std::function<bool()> isAborted)
     {
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__APPLE__) || defined(__linux__)
         if (isLoaded() && transcribeFunc)
         {
             // Allocate buffer for result JSON
@@ -196,7 +325,7 @@ struct ParakeetEngineImpl
 
     int getProgress() const
     {
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__APPLE__) || defined(__linux__)
         if (isLoaded() && getProgressFunc)
         {
             return getProgressFunc(engineHandle);
@@ -206,8 +335,13 @@ struct ParakeetEngineImpl
     }
 
 private:
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__APPLE__) || defined(__linux__)
+    #ifdef _WIN32
     HMODULE dllHandle = nullptr;
+    #else
+    void* dllHandle = nullptr;
+    #endif
+
     ParakeetEngineHandle engineHandle = nullptr;
 
     // Function pointer types

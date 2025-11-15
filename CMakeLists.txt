@@ -195,9 +195,10 @@ target_link_libraries(SharedCode
 # Link the JUCE plugin targets with our SharedCode target
 target_link_libraries("${PROJECT_NAME}" PRIVATE SharedCode)
 
-# Create ParakeetEngine as a separate DLL (Windows only for now)
+# Create ParakeetEngine as a separate library
+# Windows: DLL, macOS: dylib, Linux: shared library
 # This keeps ONNX Runtime code completely separate from the main VST3
-if(WIN32)
+if(WIN32 OR APPLE OR UNIX)
     add_library(ParakeetEngine SHARED
         source/asr/ParakeetEngineDLL.cpp
     )
@@ -218,7 +219,10 @@ if(WIN32)
     target_compile_definitions(ParakeetEngine PRIVATE
         JUCE_STANDALONE_APPLICATION=0
     )
+endif()
 
+# Windows: Copy ParakeetEngine.dll and onnxruntime.dll into VST3 bundle
+if(WIN32)
     # Copy ParakeetEngine.dll and onnxruntime.dll into VST3 bundle
     add_custom_command(TARGET ${PROJECT_NAME}_VST3 POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
@@ -231,29 +235,35 @@ if(WIN32)
     )
 endif()
 
-# macOS: Copy ONNX Runtime library into VST3 bundle and fix paths
+# macOS: Copy ParakeetEngine.dylib and ONNX Runtime into VST3 bundle
 if(APPLE)
     add_custom_command(TARGET ${PROJECT_NAME}_VST3 POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E make_directory
             $<TARGET_BUNDLE_CONTENT_DIR:${PROJECT_NAME}_VST3>/Frameworks
+        COMMAND ${CMAKE_COMMAND} -E copy
+            $<TARGET_FILE:ParakeetEngine>
+            $<TARGET_BUNDLE_CONTENT_DIR:${PROJECT_NAME}_VST3>/Frameworks/
         COMMAND ${CMAKE_COMMAND} -E copy
             ${ONNXRUNTIME_LIB_DIR}/libonnxruntime.${ONNXRUNTIME_VERSION}.dylib
             $<TARGET_BUNDLE_CONTENT_DIR:${PROJECT_NAME}_VST3>/Frameworks/
         COMMAND install_name_tool -change
             @rpath/libonnxruntime.${ONNXRUNTIME_VERSION}.dylib
             @loader_path/../Frameworks/libonnxruntime.${ONNXRUNTIME_VERSION}.dylib
-            $<TARGET_FILE:${PROJECT_NAME}_VST3>
-        COMMENT "Copying ONNX Runtime library into VST3 bundle and fixing paths"
+            $<TARGET_BUNDLE_CONTENT_DIR:${PROJECT_NAME}_VST3>/Frameworks/libParakeetEngine.dylib
+        COMMENT "Copying ParakeetEngine and ONNX Runtime into VST3 bundle and fixing paths"
     )
 endif()
 
-# Linux: Copy ONNX Runtime library
+# Linux: Copy ParakeetEngine.so and ONNX Runtime library
 if(UNIX AND NOT APPLE)
     add_custom_command(TARGET ${PROJECT_NAME}_VST3 POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy
+            $<TARGET_FILE:ParakeetEngine>
+            $<TARGET_FILE_DIR:${PROJECT_NAME}_VST3>/
+        COMMAND ${CMAKE_COMMAND} -E copy
             ${ONNXRUNTIME_LIB_DIR}/libonnxruntime.so.${ONNXRUNTIME_VERSION}
             $<TARGET_FILE_DIR:${PROJECT_NAME}_VST3>/
-        COMMENT "Copying ONNX Runtime library into VST3 directory"
+        COMMENT "Copying ParakeetEngine and ONNX Runtime into VST3 directory"
     )
 endif()
 
