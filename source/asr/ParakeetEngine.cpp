@@ -109,9 +109,15 @@ struct ParakeetEngineImpl
         {
             const char* error = dlerror();
             DBG("Failed to load ParakeetEngine.dylib - Parakeet models will not work");
-            if (error) DBG("dlerror: " + juce::String(error));
-
-            loadError = "Parakeet is not available on this system (missing dependencies). Whisper models will still work normally.";
+            if (error)
+            {
+                DBG("dlerror: " + juce::String(error));
+                loadError = std::string("Parakeet is not available: ") + error + ". Whisper models will still work normally.";
+            }
+            else
+            {
+                loadError = "Parakeet is not available (failed to load dylib). Whisper models will still work normally.";
+            }
             return;
         }
 
@@ -167,9 +173,15 @@ struct ParakeetEngineImpl
         {
             const char* error = dlerror();
             DBG("Failed to load libParakeetEngine.so - Parakeet models will not work");
-            if (error) DBG("dlerror: " + juce::String(error));
-
-            loadError = "Parakeet is not available on this system (missing dependencies). Whisper models will still work normally.";
+            if (error)
+            {
+                DBG("dlerror: " + juce::String(error));
+                loadError = std::string("Parakeet is not available: ") + error + ". Whisper models will still work normally.";
+            }
+            else
+            {
+                loadError = "Parakeet is not available (failed to load library). Whisper models will still work normally.";
+            }
             return;
         }
 

@@ -223,7 +223,6 @@ endif()
 
 # Windows: Copy ParakeetEngine.dll and onnxruntime.dll into VST3 bundle
 if(WIN32)
-    # Copy ParakeetEngine.dll and onnxruntime.dll into VST3 bundle
     add_custom_command(TARGET ${PROJECT_NAME}_VST3 POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             $<TARGET_FILE:ParakeetEngine>
@@ -248,7 +247,7 @@ if(APPLE)
             $<TARGET_BUNDLE_CONTENT_DIR:${PROJECT_NAME}_VST3>/Frameworks/
         COMMAND install_name_tool -change
             @rpath/libonnxruntime.${ONNXRUNTIME_VERSION}.dylib
-            @loader_path/../Frameworks/libonnxruntime.${ONNXRUNTIME_VERSION}.dylib
+            @loader_path/libonnxruntime.${ONNXRUNTIME_VERSION}.dylib
             $<TARGET_BUNDLE_CONTENT_DIR:${PROJECT_NAME}_VST3>/Frameworks/libParakeetEngine.dylib
         COMMENT "Copying ParakeetEngine and ONNX Runtime into VST3 bundle and fixing paths"
     )
