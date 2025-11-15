@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stddef.h>  // for size_t
+
 // C API for ParakeetEngine.dll
 // This allows the main VST3 to load ParakeetEngine dynamically without
 // linking ONNX Runtime directly into the VST3 binary
