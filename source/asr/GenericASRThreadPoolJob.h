@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <type_traits>
 
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_core/juce_core.h>
@@ -14,6 +15,9 @@
 #include "ASROptions.h"
 #include "ASRSegment.h"
 #include "ASRThreadPoolJobTypes.h"
+
+// Forward declaration
+class ParakeetEngine;
 
 template<typename EngineType>
 class GenericASRThreadPoolJob final : public juce::ThreadPoolJob
@@ -51,6 +55,20 @@ public:
 
         DBG ("Audio data size: " + juce::String (audioData.size()));
 
+        // Check if engine is available (for ParakeetEngine, check if dylib loaded)
+        if constexpr (std::is_same_v<EngineType, ParakeetEngine>)
+        {
+            if (!engine.isAvailable())
+            {
+                onStatusCallback (ASRThreadPoolJobStatus::failed);
+                std::string errorMsg = engine.getLoadError();
+                if (errorMsg.empty())
+                    errorMsg = "Parakeet engine not available";
+                onCompleteCallback ({ true, errorMsg, {} });
+                return jobHasFinished;
+            }
+        }
+
         DBG ("Downloading model");
         onStatusCallback (ASRThreadPoolJobStatus::downloadingModel);
 
@@ -58,12 +76,6 @@ public:
         {
             onStatusCallback (ASRThreadPoolJobStatus::failed);
             std::string errorMsg = "Failed to download model";
-
-            // Add Windows 10 note for Parakeet models
-            if (Config::isParakeetModel(options->modelName.toStdString()))
-            {
-                errorMsg += ".\nParakeet not working on Windows 10";
-            }
 
             onCompleteCallback ({ true, errorMsg, {} });
             return jobHasFinished;
@@ -79,12 +91,6 @@ public:
         {
             onStatusCallback (ASRThreadPoolJobStatus::failed);
             std::string errorMsg = "Failed to load model";
-
-            // Add Windows 10 note for Parakeet models
-            if (Config::isParakeetModel(options->modelName.toStdString()))
-            {
-                errorMsg += ".\nParakeet not working on Windows 10";
-            }
 
             onCompleteCallback ({ true, errorMsg, {} });
             return jobHasFinished;
