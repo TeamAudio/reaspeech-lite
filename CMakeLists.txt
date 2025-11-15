@@ -234,6 +234,8 @@ endif()
 # macOS: Copy ONNX Runtime library into VST3 bundle and fix paths
 if(APPLE)
     add_custom_command(TARGET ${PROJECT_NAME}_VST3 POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E make_directory
+            $<TARGET_BUNDLE_CONTENT_DIR:${PROJECT_NAME}_VST3>/Frameworks
         COMMAND ${CMAKE_COMMAND} -E copy
             ${ONNXRUNTIME_LIB_DIR}/libonnxruntime.${ONNXRUNTIME_VERSION}.dylib
             $<TARGET_BUNDLE_CONTENT_DIR:${PROJECT_NAME}_VST3>/Frameworks/
