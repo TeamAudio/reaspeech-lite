@@ -88,7 +88,7 @@ struct ParakeetEngineImpl
         // macOS: Load ParakeetEngine.dylib from VST3 bundle Frameworks directory
         // Use dladdr to get the path of this loaded library (the VST3), not the host application
         Dl_info info;
-        if (dladdr((void*)&ParakeetEngineImpl::ParakeetEngineImpl, &info) && info.dli_fname)
+        if (dladdr((void*)this, &info) && info.dli_fname)
         {
             std::string pathStr(info.dli_fname);
             DBG("VST3 library path: " + juce::String(pathStr));
@@ -268,16 +268,11 @@ struct ParakeetEngineImpl
     bool downloadModel(const std::string &modelName, std::function<bool()> isAborted)
     {
 #if defined(_WIN32) || defined(__APPLE__) || defined(__linux__)
+        (void)isAborted; // TODO: implement abort callback
         if (isLoaded() && downloadModelFunc)
         {
-            // Create callback wrapper
-            auto callback = [](void* userData) -> bool {
-                auto* abortFunc = static_cast<std::function<bool()>*>(userData);
-                return (*abortFunc)();
-            };
-
             // Note: We can't pass C++ lambda directly to C API
-            // For now, just pass nullptr and implement download in main plugin
+            // For now, just pass nullptr - abort checking happens in DLL
             return downloadModelFunc(engineHandle, modelName.c_str(), nullptr) != 0;
         }
 #else
@@ -306,6 +301,7 @@ struct ParakeetEngineImpl
         std::function<bool()> isAborted)
     {
 #if defined(_WIN32) || defined(__APPLE__) || defined(__linux__)
+        (void)isAborted; // TODO: implement abort callback
         if (isLoaded() && transcribeFunc)
         {
             // Allocate buffer for result JSON
