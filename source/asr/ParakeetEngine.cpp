@@ -3,11 +3,11 @@
 
 #ifdef _WIN32
 #include <windows.h>
-#elif __APPLE__
+#elif defined(__APPLE__) || defined(__linux__)
 #include <dlfcn.h>
-#include <mach-o/dyld.h>
-#elif __linux__
-#include <dlfcn.h>
+#endif
+
+#ifdef __linux__
 #include <unistd.h>
 #endif
 
@@ -86,12 +86,14 @@ struct ParakeetEngineImpl
         }
 #elif __APPLE__
         // macOS: Load ParakeetEngine.dylib from VST3 bundle Frameworks directory
-        uint32_t bufsize = 4096;
-        char path[4096];
-        if (_NSGetExecutablePath(path, &bufsize) == 0)
+        // Use dladdr to get the path of this loaded library (the VST3), not the host application
+        Dl_info info;
+        if (dladdr((void*)&ParakeetEngineImpl::ParakeetEngineImpl, &info) && info.dli_fname)
         {
-            // Get the directory containing the VST3
-            std::string pathStr(path);
+            std::string pathStr(info.dli_fname);
+            DBG("VST3 library path: " + juce::String(pathStr));
+
+            // Get the directory containing the VST3 binary
             size_t lastSlash = pathStr.find_last_of("/");
             if (lastSlash != std::string::npos)
             {
