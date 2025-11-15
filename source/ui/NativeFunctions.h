@@ -11,8 +11,10 @@
 
 #include "../Config.h"
 #include "../asr/ASREngine.h"
+#include "../asr/ParakeetEngine.h"
 #include "../asr/ASROptions.h"
 #include "../asr/ASRThreadPoolJob.h"
+#include "../asr/GenericASRThreadPoolJob.h"
 #include "../asr/WhisperLanguages.h"
 #include "../plugin/ReaSpeechLiteAudioProcessorImpl.h"
 #include "../reaper/ReaperProxy.h"
@@ -53,10 +55,10 @@ public:
             .withNativeFunction ("getAudioSourceTranscript", bindFn (&NativeFunctions::getAudioSourceTranscript))
             .withNativeFunction ("getModels", bindFn (&NativeFunctions::getModels))
             .withNativeFunction ("getPlayHeadState", bindFn (&NativeFunctions::getPlayHeadState))
-            .withNativeFunction ("getProcessingTime", bindFn (&NativeFunctions::getProcessingTime))
             .withNativeFunction ("getRegionSequences", bindFn (&NativeFunctions::getRegionSequences))
             .withNativeFunction ("getTranscriptionStatus", bindFn (&NativeFunctions::getTranscriptionStatus))
             .withNativeFunction ("getWhisperLanguages", bindFn (&NativeFunctions::getWhisperLanguages))
+            .withNativeFunction ("insertAudioAtCursor", bindFn (&NativeFunctions::insertAudioAtCursor))
             .withNativeFunction ("play", bindFn (&NativeFunctions::play))
             .withNativeFunction ("stop", bindFn (&NativeFunctions::stop))
             .withNativeFunction ("saveFile", bindFn (&NativeFunctions::saveFile))
@@ -99,9 +101,18 @@ public:
         }
         const auto markerType = *markerTypeOpt;
 
-        if (! rpr.hasAddProjectMarker2)
+        // Check for required REAPER API functions based on marker type
+        if (markerType == MarkerType::takemarkers)
         {
-            complete (makeError ("Function not available"));
+            if (! rpr.hasSetTakeMarker)
+            {
+                complete (makeError ("SetTakeMarker function not available"));
+                return;
+            }
+        }
+        else if (! rpr.hasAddProjectMarker2)
+        {
+            complete (makeError ("AddProjectMarker2 function not available"));
             return;
         }
 
@@ -110,6 +121,8 @@ public:
             {
                 if (markerType == MarkerType::notes)
                     addReaperNotesTrack (markers);
+                else if (markerType == MarkerType::takemarkers)
+                    addReaperTakeMarkers (markers);
                 else
                     addReaperMarkers (markers, markerType);
             }
@@ -229,6 +242,9 @@ public:
     {
         juce::String status;
         int progress = 0;
+        float transcriptionTime = 0.0f;
+        bool useParakeet = usingParakeetEngine.load();
+
         switch (asrStatus.load())
         {
             case ASRThreadPoolJobStatus::exporting:
@@ -236,7 +252,9 @@ public:
                 break;
             case ASRThreadPoolJobStatus::downloadingModel:
                 status = "Downloading";
-                if (asrEngine != nullptr)
+                if (useParakeet && parakeetEngine != nullptr)
+                    progress = parakeetEngine->getProgress();
+                else if (!useParakeet && asrEngine != nullptr)
                     progress = asrEngine->getProgress();
                 break;
             case ASRThreadPoolJobStatus::loadingModel:
@@ -244,18 +262,27 @@ public:
                 break;
             case ASRThreadPoolJobStatus::transcribing:
                 status = "Transcribing";
-                if (asrEngine != nullptr)
+                if (useParakeet && parakeetEngine != nullptr)
+                    progress = parakeetEngine->getProgress();
+                else if (!useParakeet && asrEngine != nullptr)
                     progress = asrEngine->getProgress();
                 break;
             case ASRThreadPoolJobStatus::ready:
             case ASRThreadPoolJobStatus::aborted:
-            case ASRThreadPoolJobStatus::finished:
             case ASRThreadPoolJobStatus::failed:
+                break;
+            case ASRThreadPoolJobStatus::finished:
+                // Get transcription time from both engines
+                if (useParakeet && parakeetEngine != nullptr)
+                    transcriptionTime = parakeetEngine->getLastTranscriptionTime();
+                else if (!useParakeet && asrEngine != nullptr)
+                    transcriptionTime = asrEngine->getLastTranscriptionTime();
                 break;
         }
         juce::DynamicObject::Ptr result = new juce::DynamicObject();
         result->setProperty ("status", status);
         result->setProperty ("progress", progress);
+        result->setProperty ("transcriptionTime", transcriptionTime);
         complete (juce::var (result.get()));
     }
 
@@ -419,27 +446,58 @@ public:
         const auto audioSourcePersistentID = args[0].toString();
         if (auto* audioSource = getAudioSourceByPersistentID (audioSourcePersistentID))
         {
-            auto* job = new ASRThreadPoolJob (
-                *asrEngine,
-                audioSource,
-                std::move(options),
-                [this] (ASRThreadPoolJobStatus status) {
-                    asrStatus = status;
-                },
-                [this, complete] (const ASRThreadPoolJobResult& result) {
-                    if (result.isError)
-                        complete (makeError (result.errorMessage));
-                    else
-                    {
-                        juce::DynamicObject::Ptr obj = new juce::DynamicObject();
-                        juce::Array<juce::var> segments;
-                        for (const auto& segment : result.segments)
-                            segments.add (segment.toDynamicObject(false).get());
-                        obj->setProperty ("segments", segments);
-                        complete (juce::var (obj.get()));
-                    }
+            // Determine which engine to use based on model name
+            bool useParakeet = Config::isParakeetModel (options->modelName.toStdString());
+
+            // Lazy initialization of ParakeetEngine - only create when first needed
+            if (useParakeet && parakeetEngine == nullptr)
+            {
+                parakeetEngine = std::make_unique<ParakeetEngine> (Config::getModelsDir());
+            }
+
+            juce::ThreadPoolJob* job = nullptr;
+
+            auto statusCallback = [this] (ASRThreadPoolJobStatus status) {
+                asrStatus = status;
+            };
+
+            auto completionCallback = [this, complete] (const ASRThreadPoolJobResult& result) {
+                if (result.isError)
+                    complete (makeError (result.errorMessage));
+                else
+                {
+                    juce::DynamicObject::Ptr obj = new juce::DynamicObject();
+                    juce::Array<juce::var> segments;
+                    for (const auto& segment : result.segments)
+                        segments.add (segment.toDynamicObject(false).get());
+                    obj->setProperty ("segments", segments);
+                    complete (juce::var (obj.get()));
                 }
-            );
+            };
+
+            if (useParakeet)
+            {
+                usingParakeetEngine.store (true);
+                job = new GenericASRThreadPoolJob<ParakeetEngine> (
+                    *parakeetEngine,
+                    audioSource,
+                    std::move(options),
+                    statusCallback,
+                    completionCallback
+                );
+            }
+            else
+            {
+                usingParakeetEngine.store (false);
+                job = new GenericASRThreadPoolJob<ASREngine> (
+                    *asrEngine,
+                    audioSource,
+                    std::move(options),
+                    statusCallback,
+                    completionCallback
+                );
+            }
+
             threadPool.addJob (job, true);
             return;
         }
@@ -458,9 +516,10 @@ public:
         complete (juce::var());
     }
 
-    void getProcessingTime (const juce::var&, std::function<void (const juce::var&)> complete)
+    void insertAudioAtCursor (const juce::var& args, std::function<void (const juce::var&)> complete)
     {
-        complete (juce::var (asrEngine->getProcessingTime()));
+        // Stub implementation - full implementation from parakeet branch can be added later
+        complete (makeError ("insertAudioAtCursor not yet implemented"));
     }
 
 private:
@@ -552,6 +611,13 @@ private:
         return item;
     }
 
+    void addReaperTakeMarkers (const juce::Array<juce::var>* markers)
+    {
+        // Stub implementation - full implementation can be added later
+        DBG ("addReaperTakeMarkers called but not yet implemented");
+        (void)markers;
+    }
+
     void setReaperNoteText (ReaperProxy::MediaItem* item, const juce::String& text, bool stretch = false)
     {
         char buffer[4096];
@@ -595,7 +661,9 @@ private:
     ReaperProxy& rpr { audioProcessor.reaperProxy };
 
     std::unique_ptr<ASREngine> asrEngine;
+    std::unique_ptr<ParakeetEngine> parakeetEngine;
     std::atomic<ASRThreadPoolJobStatus> asrStatus;
+    std::atomic<bool> usingParakeetEngine { false };
     std::atomic<bool> debugMode { false };
     juce::ThreadPool threadPool { 1 };
 

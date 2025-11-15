@@ -66,6 +66,7 @@ include(SharedCodeDefaults)
 set(SourceFiles
     source/Main.cpp
     source/reaper/IReaperHostApplication.cpp
+    source/asr/ParakeetEngine.cpp
 )
 target_sources(SharedCode INTERFACE ${SourceFiles})
 

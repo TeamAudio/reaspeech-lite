@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include <memory>
 #include <string>
 #include <vector>
@@ -27,6 +28,12 @@ public:
         }
 
         downloadTask.reset();
+    }
+
+    // Get last transcription time in seconds
+    float getLastTranscriptionTime() const
+    {
+        return lastTranscriptionTimeSecs;
     }
 
     // Download the model if needed. Returns true if successful or already downloaded.
@@ -155,8 +162,6 @@ public:
             return false;
         }
 
-        auto startTime = juce::Time::getMillisecondCounterHiRes();
-
         TranscribeCallbackData callbackData { this, isAborted };
 
         whisper_full_params params = whisper_full_default_params (WHISPER_SAMPLING_GREEDY);
@@ -179,11 +184,25 @@ public:
         params.progress_callback_user_data = &callbackData;
         progress.store (0);
 
+        // Start timing
+        auto startTime = std::chrono::high_resolution_clock::now();
+
         if (whisper_full (ctx, params, audioData.data(), static_cast<int> (audioData.size())) != 0)
         {
             DBG ("Transcription failed");
             return false;
         }
+
+        // Calculate processing time
+        auto endTime = std::chrono::high_resolution_clock::now();
+        auto durationMs = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
+        float processingTime = durationMs.count() / 1000.0f;
+        float audioDuration = static_cast<float>(audioData.size()) / 16000.0f; // Assuming 16kHz sample rate
+
+        lastTranscriptionTimeSecs = processingTime;
+
+        DBG(juce::String::formatted("Whisper transcription completed in %.2f seconds (%.2fx realtime)",
+                                    processingTime, audioDuration / processingTime));
 
         int nSegments = whisper_full_n_segments (ctx);
         DBG ("Number of segments: " + juce::String (nSegments));
@@ -225,9 +244,6 @@ public:
             segments.push_back (segment);
         }
 
-        auto endTime = juce::Time::getMillisecondCounterHiRes();
-        processingTimeSeconds.store ((endTime - startTime) / 1000.0);
-
         progress.store (100);
         return true;
     }
@@ -244,12 +260,6 @@ public:
         return progress.load();
     }
 
-    // Get processing time in seconds from last transcription
-    double getProcessingTime() const
-    {
-        return processingTimeSeconds.load();
-    }
-
 private:
     struct TranscribeCallbackData
     {
@@ -262,5 +272,5 @@ private:
     whisper_context* ctx = nullptr;
     std::unique_ptr<juce::URL::DownloadTask> downloadTask;
     std::atomic<int> progress;
-    std::atomic<double> processingTimeSeconds{0.0};
+    float lastTranscriptionTimeSecs = 0.0f;
 };
