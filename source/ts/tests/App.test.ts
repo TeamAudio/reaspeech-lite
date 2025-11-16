@@ -37,7 +37,7 @@ describe('App', () => {
     it('constructs App', () => {
       const app = new App();
 
-      expect(app.state.modelName).toBe('small');
+      expect(app.state.modelName).toBe('parakeet-tdt-0.6b-v3');
       expect(app.state.language).toBe('');
       expect(app.state.translate).toBe(false);
     });
