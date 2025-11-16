@@ -162,6 +162,9 @@ public:
             return false;
         }
 
+        // Start timing
+        auto startTime = std::chrono::high_resolution_clock::now();
+
         TranscribeCallbackData callbackData { this, isAborted };
 
         whisper_full_params params = whisper_full_default_params (WHISPER_SAMPLING_GREEDY);
@@ -184,9 +187,6 @@ public:
         params.progress_callback_user_data = &callbackData;
         progress.store (0);
 
-        // Start timing
-        auto startTime = std::chrono::high_resolution_clock::now();
-
         if (whisper_full (ctx, params, audioData.data(), static_cast<int> (audioData.size())) != 0)
         {
             DBG ("Transcription failed");
@@ -203,7 +203,6 @@ public:
 
         DBG(juce::String::formatted("Whisper transcription completed in %.2f seconds (%.2fx realtime)",
                                     processingTime, audioDuration / processingTime));
-        juce::ignoreUnused(audioDuration); // Suppress warning when DBG is disabled
 
         int nSegments = whisper_full_n_segments (ctx);
         DBG ("Number of segments: " + juce::String (nSegments));

@@ -32,6 +32,8 @@ public:
         audioProcessor (audioProcessorIn)
     {
         asrEngine = std::make_unique<ASREngine> (Config::getModelsDir());
+        // Don't create ParakeetEngine here - it will be created lazily when first needed
+        // This prevents ONNX Runtime from being loaded at plugin startup
     }
 
     // Timeout in milliseconds for aborting transcription jobs
@@ -55,10 +57,10 @@ public:
             .withNativeFunction ("getAudioSourceTranscript", bindFn (&NativeFunctions::getAudioSourceTranscript))
             .withNativeFunction ("getModels", bindFn (&NativeFunctions::getModels))
             .withNativeFunction ("getPlayHeadState", bindFn (&NativeFunctions::getPlayHeadState))
+            .withNativeFunction ("getProcessingTime", bindFn (&NativeFunctions::getProcessingTime))
             .withNativeFunction ("getRegionSequences", bindFn (&NativeFunctions::getRegionSequences))
             .withNativeFunction ("getTranscriptionStatus", bindFn (&NativeFunctions::getTranscriptionStatus))
             .withNativeFunction ("getWhisperLanguages", bindFn (&NativeFunctions::getWhisperLanguages))
-            .withNativeFunction ("insertAudioAtCursor", bindFn (&NativeFunctions::insertAudioAtCursor))
             .withNativeFunction ("play", bindFn (&NativeFunctions::play))
             .withNativeFunction ("stop", bindFn (&NativeFunctions::stop))
             .withNativeFunction ("saveFile", bindFn (&NativeFunctions::saveFile))
@@ -101,9 +103,10 @@ public:
         }
         const auto markerType = *markerTypeOpt;
 
+        // Check for required REAPER API functions based on marker type
         if (! rpr.hasAddProjectMarker2)
         {
-            complete (makeError ("Function not available"));
+            complete (makeError ("AddProjectMarker2 function not available"));
             return;
         }
 
@@ -256,16 +259,16 @@ public:
                 else if (!useParakeet && asrEngine != nullptr)
                     progress = asrEngine->getProgress();
                 break;
-            case ASRThreadPoolJobStatus::ready:
-            case ASRThreadPoolJobStatus::aborted:
-            case ASRThreadPoolJobStatus::failed:
-                break;
             case ASRThreadPoolJobStatus::finished:
                 // Get transcription time from both engines
                 if (useParakeet && parakeetEngine != nullptr)
                     transcriptionTime = parakeetEngine->getLastTranscriptionTime();
                 else if (!useParakeet && asrEngine != nullptr)
                     transcriptionTime = asrEngine->getLastTranscriptionTime();
+                break;
+            case ASRThreadPoolJobStatus::ready:
+            case ASRThreadPoolJobStatus::aborted:
+            case ASRThreadPoolJobStatus::failed:
                 break;
         }
         juce::DynamicObject::Ptr result = new juce::DynamicObject();
@@ -278,6 +281,32 @@ public:
     void getWhisperLanguages (const juce::var&, std::function<void (const juce::var&)> complete)
     {
         complete (juce::var (WhisperLanguages::get()));
+    }
+
+    void getProcessingTime (const juce::var&, std::function<void (const juce::var&)> complete)
+    {
+        // Return the last transcription time from whichever engine was used
+        float transcriptionTime = 0.0f;
+        bool useParakeet = usingParakeetEngine.load();
+
+        if (useParakeet && parakeetEngine != nullptr)
+            transcriptionTime = parakeetEngine->getLastTranscriptionTime();
+        else if (!useParakeet && asrEngine != nullptr)
+            transcriptionTime = asrEngine->getLastTranscriptionTime();
+
+        complete (juce::var (transcriptionTime));
+    }
+
+    void setDebugMode (const juce::var& args, std::function<void (const juce::var&)> complete)
+    {
+        if (!args.isBool())
+        {
+            complete (makeError ("Invalid arguments"));
+            return;
+        }
+
+        debugMode.store (args);
+        complete (juce::var());
     }
 
     void play (const juce::var&, std::function<void (const juce::var&)> complete)
@@ -493,25 +522,6 @@ public:
         complete (makeError ("Audio source not found"));
     }
 
-    void setDebugMode (const juce::var& args, std::function<void (const juce::var&)> complete)
-    {
-        if (!args.isBool())
-        {
-            complete (makeError ("Invalid arguments"));
-            return;
-        }
-
-        debugMode.store (args);
-        complete (juce::var());
-    }
-
-    void insertAudioAtCursor (const juce::var& args, std::function<void (const juce::var&)> complete)
-    {
-        juce::ignoreUnused(args);
-        // Stub implementation - full implementation from parakeet branch can be added later
-        complete (makeError ("insertAudioAtCursor not yet implemented"));
-    }
-
 private:
     ReaSpeechLiteDocumentController* getDocumentController()
     {
@@ -549,6 +559,16 @@ private:
         juce::DynamicObject::Ptr error = new juce::DynamicObject();
         error->setProperty ("error", message);
         return juce::var (error.get());
+    }
+
+    void logToConsole (const juce::String& message)
+    {
+        if (rpr.hasShowConsoleMsg)
+        {
+            rpr.ShowConsoleMsg((message + "\n").toRawUTF8());
+        }
+        // Also log with DBG for debugging outside REAPER
+        DBG(message);
     }
 
     void addReaperMarkers (const juce::Array<juce::var>* markers, const MarkerType::Enum markerType)

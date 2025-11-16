@@ -31,7 +31,7 @@ export default class App {
     this.native = new Native();
 
     this.state = {
-      modelName: 'small',
+      modelName: 'parakeet-tdt-0.6b-v3',
       language: '',
       translate: false,
       debug: false,
@@ -183,6 +183,19 @@ export default class App {
       });
 
       select.onchange = this.handleModelChange.bind(this);
+
+      // Initialize disabled state for language/translate controls if Parakeet is selected
+      const isParakeet = this.state.modelName.includes('parakeet');
+      const languageSelect = document.getElementById('language-select') as HTMLSelectElement;
+      const translateCheckbox = document.getElementById('translate-checkbox') as HTMLInputElement;
+
+      languageSelect.disabled = isParakeet;
+      translateCheckbox.disabled = isParakeet;
+
+      if (isParakeet) {
+        languageSelect.classList.add('opacity-50');
+        translateCheckbox.parentElement.classList.add('opacity-50');
+      }
     });
   }
 
@@ -247,6 +260,23 @@ export default class App {
   handleModelChange() {
     const select = document.getElementById('model-select') as HTMLSelectElement;
     this.state.modelName = select.options[select.selectedIndex].value;
+
+    // Disable language and translate options for Parakeet models
+    const isParakeet = this.state.modelName.includes('parakeet');
+    const languageSelect = document.getElementById('language-select') as HTMLSelectElement;
+    const translateCheckbox = document.getElementById('translate-checkbox') as HTMLInputElement;
+
+    languageSelect.disabled = isParakeet;
+    translateCheckbox.disabled = isParakeet;
+
+    if (isParakeet) {
+      languageSelect.classList.add('opacity-50');
+      translateCheckbox.parentElement.classList.add('opacity-50');
+    } else {
+      languageSelect.classList.remove('opacity-50');
+      translateCheckbox.parentElement.classList.remove('opacity-50');
+    }
+
     return this.saveState();
   }
 
@@ -292,18 +322,9 @@ export default class App {
       const processNextAudioSource = () => {
         if (audioSources.length === 0) {
           this.setProcessing(false);
+          this.setProcessText('Process');
           this.hideCancel();
           this.hideSpinner();
-
-          // Display processing time
-          this.native.getProcessingTime().then((time: number) => {
-            if (time > 0) {
-              this.setProcessText(`Process (${time.toFixed(1)}s)`);
-            } else {
-              this.setProcessText('Process');
-            }
-          });
-
           return Promise.resolve();
         }
 
@@ -405,15 +426,27 @@ export default class App {
   }
 
   updateTranscriptionStatus() {
-    if (!this.processing) {
-      this.setProgress(0);
-      return Promise.resolve();
-    }
     return this.native.getTranscriptionStatus().then((status) => {
+      if (!this.processing) {
+        this.setProgress(0);
+        // Show transcription time when not processing but have a time
+        if (status.transcriptionTime && status.transcriptionTime > 0) {
+          this.setProcessText('Process (' + status.transcriptionTime.toFixed(1) + 's)');
+        } else {
+          this.setProcessText('Process');
+        }
+        return;
+      }
+
       if (status.status !== '') {
         this.setProcessText(status.status + '...');
       }
       this.setProgress(status.progress);
+
+      // Show transcription time when finished
+      if (status.transcriptionTime && status.transcriptionTime > 0) {
+        this.setProcessText('Processing... (' + status.transcriptionTime.toFixed(1) + 's)');
+      }
     });
   }
 

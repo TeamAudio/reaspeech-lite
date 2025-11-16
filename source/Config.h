@@ -8,7 +8,7 @@
 struct Config
 {
     static inline const std::vector<std::pair<std::string, std::string>> models = {
-        { "parakeet-tdt-0.6b-v3", "Parakeet TDT 0.6B v3" },
+        { "parakeet-tdt-0.6b-v3", "Parakeet" },
         { "small", "Whisper Small" },
         { "medium", "Whisper Medium" },
         { "large-v3", "Whisper Large" },

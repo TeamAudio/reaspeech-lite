@@ -18,7 +18,10 @@ set(BUNDLE_ID "com.TechAudio.ReaSpeechLite")
 set(COMPANY_NAME "TechAudio")
 set(COMPANY_WEBSITE "https://techaud.io")
 set(FORMATS VST3)
-set(PRODUCT_NAME "ReaSpeechLite")
+
+# Add build timestamp to product name
+string(TIMESTAMP BUILD_TIMESTAMP "%Y%m%d_%H%M" UTC)
+set(PRODUCT_NAME "ReaSpeechLite_${BUILD_TIMESTAMP}")
 set(PROJECT_NAME "ReaSpeechLite")
 
 project(${PROJECT_NAME} VERSION ${CURRENT_VERSION})
@@ -155,7 +158,6 @@ include(SharedCodeDefaults)
 set(SourceFiles
     source/Main.cpp
     source/reaper/IReaperHostApplication.cpp
-    source/asr/ParakeetEngine.cpp
 )
 target_sources(SharedCode INTERFACE ${SourceFiles})
 
@@ -164,6 +166,11 @@ include(WebAssets)
 
 # MacOS only: Cleans up folder and target organization on Xcode.
 include(XcodePrettify)
+
+target_include_directories(SharedCode
+    INTERFACE
+    ${ONNXRUNTIME_INCLUDE_DIRS}
+)
 
 target_compile_definitions(SharedCode
     INTERFACE
@@ -178,6 +185,11 @@ target_compile_definitions(SharedCode
     VERSION="${CURRENT_VERSION}"
 )
 
+target_link_directories(SharedCode
+    INTERFACE
+    ${ONNXRUNTIME_LIB_DIR}
+)
+
 target_link_libraries(SharedCode
     INTERFACE
     Assets
@@ -190,79 +202,56 @@ target_link_libraries(SharedCode
     juce::juce_recommended_lto_flags
     juce::juce_recommended_warning_flags
     whisper
+    onnxruntime
 )
 
 # Link the JUCE plugin targets with our SharedCode target
 target_link_libraries("${PROJECT_NAME}" PRIVATE SharedCode)
 
-# Create ParakeetEngine as a separate library
-# Windows: DLL, macOS: dylib, Linux: shared library
-# This keeps ONNX Runtime code completely separate from the main VST3
-if(WIN32 OR APPLE OR UNIX)
-    add_library(ParakeetEngine SHARED
-        source/asr/ParakeetEngineDLL.cpp
+# Windows: Delay-load ONNX Runtime DLL to prevent loading at plugin startup
+# Apply directly to VST3 target to ensure the flags are properly applied to the final binary
+if(WIN32)
+    # Apply delay-load to the VST3 target specifically
+    target_link_options("${PROJECT_NAME}_VST3" PRIVATE
+        /DELAYLOAD:onnxruntime.dll
     )
+    target_link_libraries("${PROJECT_NAME}_VST3" PRIVATE delayimp)
+endif()
 
-    target_include_directories(ParakeetEngine PRIVATE
-        ${ONNXRUNTIME_INCLUDE_DIRS}
-    )
+# macOS: Copy ONNX Runtime library into VST3 bundle and fix paths
+if(APPLE)
+    add_custom_command(TARGET ${PROJECT_NAME}_VST3 POST_BUILD
+        # Copy the universal ONNX Runtime library into the VST3 bundle
+        COMMAND ${CMAKE_COMMAND} -E copy
+            ${ONNXRUNTIME_LIB_DIR}/libonnxruntime.${ONNXRUNTIME_VERSION}.dylib
+            $<TARGET_BUNDLE_DIR:${PROJECT_NAME}_VST3>/Contents/MacOS/libonnxruntime.${ONNXRUNTIME_VERSION}.dylib
 
-    target_link_directories(ParakeetEngine PRIVATE
-        ${ONNXRUNTIME_LIB_DIR}
-    )
+        # Change the library's install_name to use @loader_path
+        COMMAND install_name_tool -id "@loader_path/libonnxruntime.${ONNXRUNTIME_VERSION}.dylib"
+            $<TARGET_BUNDLE_DIR:${PROJECT_NAME}_VST3>/Contents/MacOS/libonnxruntime.${ONNXRUNTIME_VERSION}.dylib
 
-    target_link_libraries(ParakeetEngine PRIVATE
-        juce::juce_core
-        onnxruntime
-    )
+        # Update the plugin binary to look for the library at @loader_path
+        COMMAND install_name_tool -change
+            "@rpath/libonnxruntime.${ONNXRUNTIME_VERSION}.dylib"
+            "@loader_path/libonnxruntime.${ONNXRUNTIME_VERSION}.dylib"
+            $<TARGET_BUNDLE_DIR:${PROJECT_NAME}_VST3>/Contents/MacOS/${PRODUCT_NAME}
 
-    target_compile_definitions(ParakeetEngine PRIVATE
-        JUCE_STANDALONE_APPLICATION=0
+        # Re-sign the bundle after modifications (ad-hoc signing)
+        COMMAND codesign --force --deep --sign - $<TARGET_BUNDLE_DIR:${PROJECT_NAME}_VST3>
+
+        COMMENT "Copying ONNX Runtime library into VST3 bundle, fixing paths, and re-signing"
     )
 endif()
 
-# Windows: Copy ParakeetEngine.dll and onnxruntime.dll into VST3 bundle
+# Windows: Copy ONNX Runtime DLL into VST3 bundle
 if(WIN32)
     add_custom_command(TARGET ${PROJECT_NAME}_VST3 POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            $<TARGET_FILE:ParakeetEngine>
-            $<TARGET_FILE_DIR:${PROJECT_NAME}_VST3>/ParakeetEngine.dll
+        # Copy the ONNX Runtime DLL into the VST3 bundle next to the plugin binary
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             ${ONNXRUNTIME_LIB_DIR}/onnxruntime.dll
             $<TARGET_FILE_DIR:${PROJECT_NAME}_VST3>/onnxruntime.dll
-        COMMENT "Copying ParakeetEngine.dll and ONNX Runtime DLL into VST3 bundle"
-    )
-endif()
 
-# macOS: Copy ParakeetEngine.dylib and ONNX Runtime into VST3 bundle
-if(APPLE)
-    add_custom_command(TARGET ${PROJECT_NAME}_VST3 POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E make_directory
-            $<TARGET_BUNDLE_CONTENT_DIR:${PROJECT_NAME}_VST3>/Frameworks
-        COMMAND ${CMAKE_COMMAND} -E copy
-            $<TARGET_FILE:ParakeetEngine>
-            $<TARGET_BUNDLE_CONTENT_DIR:${PROJECT_NAME}_VST3>/Frameworks/
-        COMMAND ${CMAKE_COMMAND} -E copy
-            ${ONNXRUNTIME_LIB_DIR}/libonnxruntime.${ONNXRUNTIME_VERSION}.dylib
-            $<TARGET_BUNDLE_CONTENT_DIR:${PROJECT_NAME}_VST3>/Frameworks/
-        COMMAND install_name_tool -change
-            @rpath/libonnxruntime.${ONNXRUNTIME_VERSION}.dylib
-            @loader_path/libonnxruntime.${ONNXRUNTIME_VERSION}.dylib
-            $<TARGET_BUNDLE_CONTENT_DIR:${PROJECT_NAME}_VST3>/Frameworks/libParakeetEngine.dylib
-        COMMENT "Copying ParakeetEngine and ONNX Runtime into VST3 bundle and fixing paths"
-    )
-endif()
-
-# Linux: Copy ParakeetEngine.so and ONNX Runtime library
-if(UNIX AND NOT APPLE)
-    add_custom_command(TARGET ${PROJECT_NAME}_VST3 POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy
-            $<TARGET_FILE:ParakeetEngine>
-            $<TARGET_FILE_DIR:${PROJECT_NAME}_VST3>/
-        COMMAND ${CMAKE_COMMAND} -E copy
-            ${ONNXRUNTIME_LIB_DIR}/libonnxruntime.so.${ONNXRUNTIME_VERSION}
-            $<TARGET_FILE_DIR:${PROJECT_NAME}_VST3>/
-        COMMENT "Copying ParakeetEngine and ONNX Runtime into VST3 directory"
+        COMMENT "Copying ONNX Runtime DLL into VST3 bundle"
     )
 endif()
 
