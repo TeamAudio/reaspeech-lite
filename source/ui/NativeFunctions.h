@@ -14,7 +14,6 @@
 #include "../asr/ParakeetEngine.h"
 #include "../asr/ASROptions.h"
 #include "../asr/ASRThreadPoolJob.h"
-#include "../asr/GenericASRThreadPoolJob.h"
 #include "../asr/WhisperLanguages.h"
 #include "../plugin/ReaSpeechLiteAudioProcessorImpl.h"
 #include "../reaper/ReaperProxy.h"
@@ -234,7 +233,7 @@ public:
     {
         juce::String status;
         int progress = 0;
-        float transcriptionTime = 0.0f;
+        double transcriptionTime = 0.0;
         bool useParakeet = usingParakeetEngine.load();
 
         switch (asrStatus.load())
@@ -262,9 +261,9 @@ public:
             case ASRThreadPoolJobStatus::finished:
                 // Get transcription time from both engines
                 if (useParakeet && parakeetEngine != nullptr)
-                    transcriptionTime = parakeetEngine->getLastTranscriptionTime();
+                    transcriptionTime = parakeetEngine->getProcessingTime();
                 else if (!useParakeet && asrEngine != nullptr)
-                    transcriptionTime = asrEngine->getLastTranscriptionTime();
+                    transcriptionTime = asrEngine->getProcessingTime();
                 break;
             case ASRThreadPoolJobStatus::ready:
             case ASRThreadPoolJobStatus::aborted:
@@ -286,13 +285,13 @@ public:
     void getProcessingTime (const juce::var&, std::function<void (const juce::var&)> complete)
     {
         // Return the last transcription time from whichever engine was used
-        float transcriptionTime = 0.0f;
+        double transcriptionTime = 0.0;
         bool useParakeet = usingParakeetEngine.load();
 
         if (useParakeet && parakeetEngine != nullptr)
-            transcriptionTime = parakeetEngine->getLastTranscriptionTime();
+            transcriptionTime = parakeetEngine->getProcessingTime();
         else if (!useParakeet && asrEngine != nullptr)
-            transcriptionTime = asrEngine->getLastTranscriptionTime();
+            transcriptionTime = asrEngine->getProcessingTime();
 
         complete (juce::var (transcriptionTime));
     }
@@ -496,7 +495,7 @@ public:
             if (useParakeet)
             {
                 usingParakeetEngine.store (true);
-                job = new GenericASRThreadPoolJob<ParakeetEngine> (
+                job = new ASRThreadPoolJob<ParakeetEngine> (
                     *parakeetEngine,
                     audioSource,
                     std::move(options),
@@ -507,7 +506,7 @@ public:
             else
             {
                 usingParakeetEngine.store (false);
-                job = new GenericASRThreadPoolJob<ASREngine> (
+                job = new ASRThreadPoolJob<ASREngine> (
                     *asrEngine,
                     audioSource,
                     std::move(options),

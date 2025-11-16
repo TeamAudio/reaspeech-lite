@@ -33,10 +33,10 @@ public:
         downloadTask.reset();
     }
 
-    // Get last transcription time in seconds
-    float getLastTranscriptionTime() const
+    // Get processing time in seconds from last transcription
+    double getProcessingTime() const
     {
-        return lastTranscriptionTimeSecs;
+        return processingTimeSeconds.load();
     }
 
     // Download the model if needed. Returns true if successful or already downloaded.
@@ -217,8 +217,7 @@ public:
 
         progress.store(0);
 
-        // Start timing
-        auto startTime = std::chrono::high_resolution_clock::now();
+        auto startTime = juce::Time::getMillisecondCounterHiRes();
 
         try
         {
@@ -343,15 +342,8 @@ public:
                 deduplicateTokenInfo(tokenInfos);
             }
 
-            // Calculate processing time
-            auto endTime = std::chrono::high_resolution_clock::now();
-            auto durationMs = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
-            float processingTime = durationMs.count() / 1000.0f;
-
-            lastTranscriptionTimeSecs = processingTime; // Store for UI display
-
-            DBG(juce::String::formatted("Parakeet transcription completed in %.2f seconds (%.2fx realtime)",
-                                        processingTime, audioDuration / processingTime));
+            auto endTime = juce::Time::getMillisecondCounterHiRes();
+            processingTimeSeconds.store((endTime - startTime) / 1000.0);
 
             // Create segments with word-level timestamps if available
             if (!tokenInfos.empty())
@@ -1037,5 +1029,5 @@ private:
     std::map<int, std::string> vocab;
     int64_t vocabSize = 0;
     int blankIdx = -1;
-    float lastTranscriptionTimeSecs = 0.0f;
+    std::atomic<double> processingTimeSeconds{0.0};
 };
