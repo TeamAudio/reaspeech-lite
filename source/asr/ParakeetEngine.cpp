@@ -87,8 +87,10 @@ struct ParakeetEngineImpl
 #elif __APPLE__
         // macOS: Load ParakeetEngine.dylib from VST3 bundle Frameworks directory
         // Use dladdr to get the path of this loaded library (the VST3), not the host application
+        // We use the address of the ParakeetEngine constructor which is in the library's code section
         Dl_info info;
-        if (dladdr((void*)this, &info) && info.dli_fname)
+        void* symbolAddr = (void*)&ParakeetEngine::ParakeetEngine;
+        if (dladdr(symbolAddr, &info) && info.dli_fname)
         {
             std::string pathStr(info.dli_fname);
             DBG("VST3 library path: " + juce::String(pathStr));
