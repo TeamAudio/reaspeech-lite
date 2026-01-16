@@ -14,7 +14,11 @@
 class ASREngine
 {
 public:
-    ASREngine (const std::string& modelsDirIn) : modelsDir (modelsDirIn) {}
+    ASREngine (const std::string& modelsDirIn) : modelsDir (modelsDirIn)
+    {
+        // Create models directory if it doesn't already exist
+        juce::File (modelsDir).createDirectory();
+    }
 
     ~ASREngine()
     {
@@ -235,7 +239,6 @@ private:
             return true;
         }
 
-        juce::File (modelsDir).createDirectory();
         progress.store (0);
 
         DBG ("Downloading " + description);
