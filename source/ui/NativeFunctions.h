@@ -411,6 +411,8 @@ public:
                     options->language = optionsObj->getProperty ("language");
                 if (optionsObj->hasProperty ("translate"))
                     options->translate = optionsObj->getProperty ("translate");
+                if (optionsObj->hasProperty ("vad"))
+                    options->vad = optionsObj->getProperty ("vad");
             }
         }
 

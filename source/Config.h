@@ -14,9 +14,16 @@ struct Config
         { "large-v3-turbo", "Turbo" }
     };
 
+    static inline const std::string vadModelName = "silero-v6.2.0";
+
     static const juce::URL getModelURL (std::string modelNameIn)
     {
         return juce::URL ("https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-" + modelNameIn + ".bin");
+    }
+
+    static const juce::URL getVadModelURL()
+    {
+        return juce::URL ("https://huggingface.co/ggml-org/whisper-vad/resolve/main/ggml-" + vadModelName + ".bin");
     }
 
     static const std::string getModelsDir()

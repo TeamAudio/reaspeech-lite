@@ -19,6 +19,7 @@ enum class ASRThreadPoolJobStatus
     ready,
     exporting,
     downloadingModel,
+    downloadingVadModel,
     loadingModel,
     transcribing,
     aborted,
@@ -80,6 +81,23 @@ public:
 
         if (aborting())
             return jobHasFinished;
+
+        // Download VAD model if VAD is enabled
+        if (options->vad)
+        {
+            DBG ("Downloading VAD model");
+            onStatusCallback (ASRThreadPoolJobStatus::downloadingVadModel);
+
+            if (! asrEngine.downloadVadModel (isAborted))
+            {
+                onStatusCallback (ASRThreadPoolJobStatus::failed);
+                onCompleteCallback ({ true, "Failed to download VAD model", {} });
+                return jobHasFinished;
+            }
+
+            if (aborting())
+                return jobHasFinished;
+        }
 
         DBG ("Loading model");
         onStatusCallback (ASRThreadPoolJobStatus::loadingModel);

@@ -95,6 +95,72 @@ public:
         return true;
     }
 
+    // Download the VAD model if needed. Returns true if successful or already downloaded.
+    bool downloadVadModel (std::function<bool ()> isAborted)
+    {
+        std::string modelPath = getVadModelPath();
+
+        if (juce::File (modelPath).exists())
+        {
+            DBG ("VAD model already downloaded: " + modelPath);
+            progress.store (100);
+            return true;
+        }
+
+        juce::File (modelsDir).createDirectory();
+        progress.store (0);
+
+        DBG ("Downloading VAD model");
+        juce::URL url = Config::getVadModelURL();
+        auto file = juce::File (modelPath);
+
+        downloadTask = url.downloadToFile (file, juce::URL::DownloadTaskOptions());
+
+        while (downloadTask != nullptr && !downloadTask->isFinished())
+        {
+            if (isAborted())
+            {
+                DBG ("VAD download aborted");
+                downloadTask.reset();
+                progress.store (0);
+
+                if (juce::File (modelPath).deleteFile())
+                {
+                    DBG ("Deleted VAD model file");
+                }
+
+                return false;
+            }
+
+            auto totalLength = downloadTask->getTotalLength();
+            if (totalLength > 0)
+            {
+                auto downloadedLength = downloadTask->getLengthDownloaded();
+                progress.store (static_cast<int> ((downloadedLength * 100) / totalLength));
+            }
+
+            juce::Thread::sleep (100);
+        }
+
+        if (downloadTask == nullptr || downloadTask->hadError())
+        {
+            DBG ("Failed to download VAD model");
+            downloadTask.reset();
+            progress.store (0);
+
+            if (juce::File (modelPath).deleteFile())
+            {
+                DBG ("Deleted VAD model file");
+            }
+
+            return false;
+        }
+
+        downloadTask.reset();
+        progress.store (100);
+        return true;
+    }
+
     // Load the model by name. Returns true if successful.
     bool loadModel (const std::string& modelName)
     {
@@ -159,8 +225,35 @@ public:
 
         whisper_full_params params = whisper_full_default_params (WHISPER_SAMPLING_GREEDY);
         params.token_timestamps = true;
-        params.language = options.language.toStdString().c_str();
+
+        // Keep strings alive for the duration of the function
+        std::string languageStr = options.language.toStdString();
+        std::string vadModelPathStr;
+
+        params.language = languageStr.c_str();
         params.translate = options.translate;
+
+        // VAD configuration
+        if (options.vad)
+        {
+            vadModelPathStr = getVadModelPath();
+            if (juce::File (vadModelPathStr).exists())
+            {
+                params.vad = true;
+                params.vad_model_path = vadModelPathStr.c_str();
+                params.vad_params = whisper_vad_default_params();
+                DBG ("VAD enabled with model: " + vadModelPathStr);
+            }
+            else
+            {
+                DBG ("VAD model not found, disabling VAD");
+                params.vad = false;
+            }
+        }
+        else
+        {
+            params.vad = false;
+        }
 
         params.encoder_begin_callback = [] (whisper_context*, whisper_state*, void* user_data)
         {
@@ -231,6 +324,12 @@ public:
     std::string getModelPath (const std::string& modelName) const
     {
         return modelsDir + "ggml-" + modelName + ".bin";
+    }
+
+    // Get the full path to the VAD model file
+    std::string getVadModelPath() const
+    {
+        return modelsDir + "ggml-" + Config::vadModelName + ".bin";
     }
 
     // Get current progress (0-100) of download or transcription
