@@ -226,23 +226,23 @@ public:
         whisper_full_params params = whisper_full_default_params (WHISPER_SAMPLING_GREEDY);
         params.token_timestamps = true;
 
-        // Keep strings alive for the duration of the function
-        std::string languageStr = options.language.toStdString();
-        std::string vadModelPathStr;
+        // Storage for strings referenced by params via const char* pointers
+        std::string paramsLanguage = options.language.toStdString();
+        std::string paramsVadModelPath;
 
-        params.language = languageStr.c_str();
+        params.language = paramsLanguage.c_str();
         params.translate = options.translate;
 
         // VAD configuration
         if (options.vad)
         {
-            vadModelPathStr = getVadModelPath();
-            if (juce::File (vadModelPathStr).exists())
+            paramsVadModelPath = getVadModelPath();
+            if (juce::File (paramsVadModelPath).exists())
             {
                 params.vad = true;
-                params.vad_model_path = vadModelPathStr.c_str();
+                params.vad_model_path = paramsVadModelPath.c_str();
                 params.vad_params = whisper_vad_default_params();
-                DBG ("VAD enabled with model: " + vadModelPathStr);
+                DBG ("VAD enabled with model: " + paramsVadModelPath);
             }
             else
             {
