@@ -14,7 +14,11 @@
 class ASREngine
 {
 public:
-    ASREngine (const std::string& modelsDirIn) : modelsDir (modelsDirIn) {}
+    ASREngine (const std::string& modelsDirIn) : modelsDir (modelsDirIn)
+    {
+        // Create models directory if it doesn't already exist
+        juce::File (modelsDir).createDirectory();
+    }
 
     ~ASREngine()
     {
@@ -32,67 +36,13 @@ public:
     // Download the model if needed. Returns true if successful or already downloaded.
     bool downloadModel (const std::string& modelName, std::function<bool ()> isAborted)
     {
-        std::string modelPath = getModelPath (modelName);
+        return downloadFile (getModelPath (modelName), Config::getModelURL (modelName), "model", isAborted);
+    }
 
-        if (juce::File (modelPath).exists())
-        {
-            DBG ("Model already downloaded: " + modelPath);
-            progress.store (100);
-            return true;
-        }
-
-        juce::File (modelsDir).createDirectory();
-        progress.store (0);
-
-        DBG ("Downloading model");
-        juce::URL url = Config::getModelURL (modelName);
-        auto file = juce::File (modelPath);
-
-        downloadTask = url.downloadToFile (file, juce::URL::DownloadTaskOptions());
-
-        while (downloadTask != nullptr && !downloadTask->isFinished())
-        {
-            if (isAborted())
-            {
-                DBG ("Download aborted");
-                downloadTask.reset();
-                progress.store (0);
-
-                if (juce::File (modelPath).deleteFile())
-                {
-                    DBG ("Deleted model file");
-                }
-
-                return false;
-            }
-
-            auto totalLength = downloadTask->getTotalLength();
-            if (totalLength > 0)
-            {
-                auto downloadedLength = downloadTask->getLengthDownloaded();
-                progress.store (static_cast<int> ((downloadedLength * 100) / totalLength));
-            }
-
-            juce::Thread::sleep (100);
-        }
-
-        if (downloadTask == nullptr || downloadTask->hadError())
-        {
-            DBG ("Failed to download model");
-            downloadTask.reset();
-            progress.store (0);
-
-            if (juce::File (modelPath).deleteFile())
-            {
-                DBG ("Deleted model file");
-            }
-
-            return false;
-        }
-
-        downloadTask.reset();
-        progress.store (100);
-        return true;
+    // Download the VAD model if needed. Returns true if successful or already downloaded.
+    bool downloadVadModel (std::function<bool ()> isAborted)
+    {
+        return downloadFile (getVadModelPath(), Config::getVadModelURL(), "VAD model", isAborted);
     }
 
     // Load the model by name. Returns true if successful.
@@ -159,8 +109,35 @@ public:
 
         whisper_full_params params = whisper_full_default_params (WHISPER_SAMPLING_GREEDY);
         params.token_timestamps = true;
-        params.language = options.language.toStdString().c_str();
+
+        // Storage for strings referenced by params via const char* pointers
+        std::string paramsLanguage = options.language.toStdString();
+        std::string paramsVadModelPath;
+
+        params.language = paramsLanguage.c_str();
         params.translate = options.translate;
+
+        // VAD configuration
+        if (options.vad)
+        {
+            paramsVadModelPath = getVadModelPath();
+            if (juce::File (paramsVadModelPath).exists())
+            {
+                params.vad = true;
+                params.vad_model_path = paramsVadModelPath.c_str();
+                params.vad_params = whisper_vad_default_params();
+                DBG ("VAD enabled with model: " + paramsVadModelPath);
+            }
+            else
+            {
+                DBG ("VAD model not found, disabling VAD");
+                params.vad = false;
+            }
+        }
+        else
+        {
+            params.vad = false;
+        }
 
         params.encoder_begin_callback = [] (whisper_context*, whisper_state*, void* user_data)
         {
@@ -233,6 +210,12 @@ public:
         return modelsDir + "ggml-" + modelName + ".bin";
     }
 
+    // Get the full path to the VAD model file
+    std::string getVadModelPath() const
+    {
+        return modelsDir + "ggml-" + Config::vadModelName + ".bin";
+    }
+
     // Get current progress (0-100) of download or transcription
     int getProgress() const
     {
@@ -245,6 +228,68 @@ private:
         ASREngine* engine;
         std::function<bool()> isAborted;
     };
+
+    // Helper to download a file with progress tracking and abort support
+    bool downloadFile (const std::string& filePath, juce::URL url, const std::string& description, std::function<bool ()> isAborted)
+    {
+        if (juce::File (filePath).exists())
+        {
+            DBG (description + " already downloaded: " + filePath);
+            progress.store (100);
+            return true;
+        }
+
+        progress.store (0);
+
+        DBG ("Downloading " + description);
+        auto file = juce::File (filePath);
+
+        downloadTask = url.downloadToFile (file, juce::URL::DownloadTaskOptions());
+
+        while (downloadTask != nullptr && !downloadTask->isFinished())
+        {
+            if (isAborted())
+            {
+                DBG (description + " download aborted");
+                downloadTask.reset();
+                progress.store (0);
+
+                if (juce::File (filePath).deleteFile())
+                {
+                    DBG ("Deleted " + description + " file");
+                }
+
+                return false;
+            }
+
+            auto totalLength = downloadTask->getTotalLength();
+            if (totalLength > 0)
+            {
+                auto downloadedLength = downloadTask->getLengthDownloaded();
+                progress.store (static_cast<int> ((downloadedLength * 100) / totalLength));
+            }
+
+            juce::Thread::sleep (100);
+        }
+
+        if (downloadTask == nullptr || downloadTask->hadError())
+        {
+            DBG ("Failed to download " + description);
+            downloadTask.reset();
+            progress.store (0);
+
+            if (juce::File (filePath).deleteFile())
+            {
+                DBG ("Deleted " + description + " file");
+            }
+
+            return false;
+        }
+
+        downloadTask.reset();
+        progress.store (100);
+        return true;
+    }
 
     std::string modelsDir;
     std::string lastModelName;

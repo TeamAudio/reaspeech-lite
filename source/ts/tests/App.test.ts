@@ -40,6 +40,7 @@ describe('App', () => {
       expect(app.state.modelName).toBe('small');
       expect(app.state.language).toBe('');
       expect(app.state.translate).toBe(false);
+      expect(app.state.vad).toBe(false);
     });
 
     it('initializes models correctly', async () => {
@@ -111,6 +112,7 @@ describe('App', () => {
         modelName: 'medium',
         language: 'fr',
         translate: true,
+        vad: true,
       })];
 
       const app = new App();
@@ -119,6 +121,7 @@ describe('App', () => {
         expect(app.state.modelName).toBe('medium');
         expect(app.state.language).toBe('fr');
         expect(app.state.translate).toBe(true);
+        expect(app.state.vad).toBe(true);
       });
     });
 
@@ -130,6 +133,7 @@ describe('App', () => {
 
       expect(app.state.language).toBe('');
       expect(app.state.translate).toBe(false);
+      expect(app.state.vad).toBe(false);
     });
 
     it('handles invalid JSON when loading state', async () => {
@@ -140,6 +144,7 @@ describe('App', () => {
 
       expect(app.state.language).toBe('');
       expect(app.state.translate).toBe(false);
+      expect(app.state.vad).toBe(false);
 
       expect(warnSpy).toHaveBeenCalled();
 
@@ -163,6 +168,25 @@ describe('App', () => {
         segments: [{ text: 'test', start: 0, end: 1 }]
       });
       expect(app.state.transcript).toBeUndefined();
+    });
+
+    it('merges saved state with defaults for backwards compatibility', async () => {
+      // Simulate old saved state without vad property
+      window.__JUCE__.initialisationData.webState = [JSON.stringify({
+        modelName: 'medium',
+        language: 'en',
+        translate: true,
+      })];
+
+      const app = new App();
+      await app.loadState();
+
+      // Saved values should be loaded
+      expect(app.state.modelName).toBe('medium');
+      expect(app.state.language).toBe('en');
+      expect(app.state.translate).toBe(true);
+      // Default value should be preserved for new properties
+      expect(app.state.vad).toBe(false);
     });
 
     it('saves state', async () => {
@@ -245,6 +269,21 @@ describe('App', () => {
       await app.handleTranslateChange();
 
       expect(app.state.translate).toBe(true);
+      expect(mockSaveState).toHaveBeenCalled();
+
+      mockSaveState.mockRestore();
+    });
+
+    it('handles vad checkbox change', async () => {
+      const app = new App();
+      const mockSaveState = jest.spyOn(app, 'saveState').mockImplementation(() => Promise.resolve());
+
+      const checkbox = document.getElementById('vad-checkbox') as HTMLInputElement;
+      checkbox.checked = true;
+
+      await app.handleVadChange();
+
+      expect(app.state.vad).toBe(true);
       expect(mockSaveState).toHaveBeenCalled();
 
       mockSaveState.mockRestore();

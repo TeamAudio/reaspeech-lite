@@ -34,6 +34,7 @@ export default class App {
       modelName: 'small',
       language: '',
       translate: false,
+      vad: false,
     };
   }
 
@@ -136,7 +137,9 @@ export default class App {
       return Promise.resolve();
     }
     try {
-      this.state = JSON.parse(window.__JUCE__.initialisationData.webState[0]);
+      const savedState = JSON.parse(window.__JUCE__.initialisationData.webState[0]);
+      // Merge saved state with defaults to handle new properties
+      this.state = { ...this.state, ...savedState };
     } catch (e) {
       console.warn('Failed to parse web state:', e);
       this.showAlert('danger', '<b>Error:</b> Failed to read project data!');
@@ -202,6 +205,10 @@ export default class App {
       const translateCheckbox = document.getElementById('translate-checkbox') as HTMLInputElement;
       translateCheckbox.checked = this.state.translate;
       translateCheckbox.onchange = this.handleTranslateChange.bind(this);
+
+      const vadCheckbox = document.getElementById('vad-checkbox') as HTMLInputElement;
+      vadCheckbox.checked = this.state.vad;
+      vadCheckbox.onchange = this.handleVadChange.bind(this);
     });
   }
 
@@ -256,6 +263,11 @@ export default class App {
     return this.saveState();
   }
 
+  handleVadChange() {
+    this.state.vad = (document.getElementById('vad-checkbox') as HTMLInputElement).checked;
+    return this.saveState();
+  }
+
   handleProcess() {
     this.setProcessing(true);
     this.showSpinner();
@@ -264,10 +276,12 @@ export default class App {
     const languageSelect = document.getElementById('language-select') as HTMLSelectElement;
     const languageCode = languageSelect.options[languageSelect.selectedIndex].value;
     const translate = (document.getElementById('translate-checkbox') as HTMLInputElement).checked;
+    const vad = (document.getElementById('vad-checkbox') as HTMLInputElement).checked;
     const asrOptions = {
       modelName: this.state.modelName,
       language: languageCode,
-      translate: translate
+      translate: translate,
+      vad: vad
     };
 
     const selectedAudioSourceIds = new Set(this.audioSourceGrid.getSelectedRowIds());
