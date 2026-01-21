@@ -233,6 +233,7 @@ public:
                 status = "Exporting";
                 break;
             case ASRThreadPoolJobStatus::downloadingModel:
+            case ASRThreadPoolJobStatus::downloadingVadModel:
                 status = "Downloading";
                 if (asrEngine != nullptr)
                     progress = asrEngine->getProgress();

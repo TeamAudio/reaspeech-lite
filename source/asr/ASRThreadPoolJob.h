@@ -85,7 +85,6 @@ public:
         // Download VAD model if VAD is enabled
         if (options->vad)
         {
-            DBG ("Downloading VAD model");
             onStatusCallback (ASRThreadPoolJobStatus::downloadingVadModel);
 
             if (! asrEngine.downloadVadModel (isAborted))
