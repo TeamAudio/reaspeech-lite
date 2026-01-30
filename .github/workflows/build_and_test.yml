@@ -52,13 +52,13 @@ jobs:
             os: windows-latest
             cuda: true
             cuda-version: '12.5.0'
-            release-only: true
+            release-only: false
             extra-flags: -DGGML_CUDA=1 -DGGML_STATIC=1 -DCMAKE_CUDA_ARCHITECTURES=all
           - name: WindowsCUDA13
             os: windows-latest
             cuda: true
             cuda-version: '13.1.0'
-            release-only: true
+            release-only: false
             extra-flags: -DGGML_CUDA=1 -DGGML_STATIC=1 -DCMAKE_CUDA_ARCHITECTURES=all
 
     steps:
