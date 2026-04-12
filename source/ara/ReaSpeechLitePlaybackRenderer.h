@@ -97,15 +97,12 @@ private:
             readerSource = std::make_unique<juce::AudioFormatReaderSource> (
                 new juce::ARAAudioSourceReader (audioSource), true);
         }
-
-        auto resamplingSource = std::make_unique<juce::ResamplingAudioSource> (
-            readerSource.get(), false, audioSource->getChannelCount());
-
-        resamplingSource->setResamplingRatio (audioSource->getSampleRate() / destSampleRate);
-
         resamplers.emplace (audioSource, std::make_unique<ResamplingDriver> (
             std::move (readerSource),
-            std::move (resamplingSource)));
+            audioSource->getChannelCount(),
+            audioSource->getSampleRate() / destSampleRate,
+            maximumSamplesPerBlock,
+            destSampleRate));
     }
 
     juce::BufferingAudioReader* buildBufferedReader(juce::ARAAudioSource* audioSource)
@@ -198,7 +195,7 @@ private:
             * sourceSamplesPerDestSample);
 
         resampler->seek (sourceStartSample);
-        resampler->read (juce::AudioSourceChannelInfo (*tempBuffer));
+        resampler->read (juce::AudioSourceChannelInfo (tempBuffer.get(), 0, destNumSamples));
 
         // Mix local buffer into the output buffer.
         for (int destChannel = 0; destChannel < destNumChannels; ++destChannel)
