@@ -21,7 +21,8 @@ public:
         sourceSamplesPerDestSample (sourceSamplesPerDestSampleIn),
         unityRatio (juce::approximatelyEqual (sourceSamplesPerDestSampleIn, 1.0))
     {
-        interpolators.resize ((size_t) juce::jmax (1, sourceNumChannels));
+        if (! unityRatio)
+            interpolators.resize ((size_t) juce::jmax (1, sourceNumChannels));
         prepareToPlay (maximumSamplesPerBlockIn, destSampleRateIn);
     }
 
@@ -97,7 +98,8 @@ private:
         const auto sourceSampleRate = destSampleRateIn * sourceSamplesPerDestSample;
 
         source->prepareToPlay (sourceBlockSize, sourceSampleRate);
-        sourceBuffer.setSize (juce::jmax (1, sourceNumChannels), maximumSamplesPerBlock * 4);
+        if (! unityRatio)
+            sourceBuffer.setSize (juce::jmax (1, sourceNumChannels), maximumSamplesPerBlock * 4);
         clearResamplingState();
     }
 
