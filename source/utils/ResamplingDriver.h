@@ -91,7 +91,12 @@ private:
         maximumSamplesPerBlock = maximumSamplesPerBlockIn;
         destSampleRate = destSampleRateIn;
 
-        source->prepareToPlay (maximumSamplesPerBlock, destSampleRate);
+        const auto sourceBlockSize = unityRatio
+            ? maximumSamplesPerBlock
+            : juce::roundToInt (std::ceil (maximumSamplesPerBlock * sourceSamplesPerDestSample)) + interpolationPadding;
+        const auto sourceSampleRate = destSampleRateIn * sourceSamplesPerDestSample;
+
+        source->prepareToPlay (sourceBlockSize, sourceSampleRate);
         sourceBuffer.setSize (juce::jmax (1, sourceNumChannels), maximumSamplesPerBlock * 4);
         clearResamplingState();
     }
@@ -155,5 +160,4 @@ private:
 
     static constexpr int interpolationPadding = 16;
     static constexpr int seekToleranceSamples = 2;
-
 };
