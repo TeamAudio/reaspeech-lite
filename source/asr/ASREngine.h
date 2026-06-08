@@ -73,6 +73,12 @@ public:
 
         whisper_context_params params = whisper_context_default_params();
 
+#if defined (__APPLE__) && defined (__x86_64__)
+        DBG ("Intel Mac detected, disabling whisper GPU support");
+        params.use_gpu = false;
+        params.flash_attn = false;
+#endif
+
         ctx = whisper_init_from_file_with_params (modelPath.c_str(), params);
         if (ctx == nullptr)
         {
