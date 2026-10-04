@@ -36,3 +36,6 @@ build/
 *.exe
 *.out
 *.app
+
+build-reaspeech/
+whisper.cpp/

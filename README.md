@@ -21,7 +21,7 @@ containing text notes.
 ReaSpeech Lite is a simple tool that aims to have a minimal but powerful
 feature set. The following features are currently available:
 
-### Transcription with whisper.cpp
+### Transcription with ReaSpeech Lib
 
 - Transcription using Small, Medium, Large, and Large v3 Turbo models
 - Automatic download of models
@@ -170,10 +170,10 @@ Then, at the main source directory, run the following:
     cmake -B build -DCMAKE_BUILD_TYPE=Debug
 
     # Windows/CUDA:
-    cmake -B build -DCMAKE_BUILD_TYPE=Debug -DGGML_CUDA=1
+    cmake -B build -DCMAKE_BUILD_TYPE=Debug -DREASPEECH_FEATURES=cuda
 
     # Linux/CUDA:
-    cmake -B build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DGGML_CUDA=1
+    cmake -B build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DREASPEECH_FEATURES=cuda
 
 You should now be able to build the plugin with:
 
@@ -217,8 +217,8 @@ ReaSpeech Lite uses the
 derived from the
 [ARA Plugin Demo](https://github.com/juce-framework/JUCE/blob/master/examples/Plugins/ARAPluginDemo.h).
 
-Speech recognition is provided by the
-[whisper.cpp](https://github.com/ggml-org/whisper.cpp) project.
+Speech recognition is provided by
+[ReaSpeech Lib](https://github.com/TeamAudio/reaspeech-lib) through its C API.
 
 GitHub workflow and build automation based on the
 [Pamplejuce](https://github.com/sudara/pamplejuce) project.

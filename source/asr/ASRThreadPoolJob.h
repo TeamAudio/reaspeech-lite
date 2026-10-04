@@ -7,7 +7,6 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_core/juce_core.h>
-#include <whisper.h>
 
 #include "../utils/ResamplingExporter.h"
 #include "ASREngine.h"
@@ -62,54 +61,12 @@ public:
         onStatusCallback (ASRThreadPoolJobStatus::exporting);
 
         std::vector<float> audioData;
-        ResamplingExporter::exportAudio (audioSource, WHISPER_SAMPLE_RATE, 0, audioData, isAborted);
+        ResamplingExporter::exportAudio (audioSource, 16000, 0, audioData, isAborted);
 
         if (aborting())
             return jobHasFinished;
 
         DBG ("Audio data size: " + juce::String (audioData.size()));
-
-        DBG ("Downloading model");
-        onStatusCallback (ASRThreadPoolJobStatus::downloadingModel);
-
-        if (! asrEngine.downloadModel (options->modelName.toStdString(), isAborted))
-        {
-            onStatusCallback (ASRThreadPoolJobStatus::failed);
-            onCompleteCallback ({ true, "Failed to download model", {} });
-            return jobHasFinished;
-        }
-
-        if (aborting())
-            return jobHasFinished;
-
-        // Download VAD model if VAD is enabled
-        if (options->vad)
-        {
-            onStatusCallback (ASRThreadPoolJobStatus::downloadingVadModel);
-
-            if (! asrEngine.downloadVadModel (isAborted))
-            {
-                onStatusCallback (ASRThreadPoolJobStatus::failed);
-                onCompleteCallback ({ true, "Failed to download VAD model", {} });
-                return jobHasFinished;
-            }
-
-            if (aborting())
-                return jobHasFinished;
-        }
-
-        DBG ("Loading model");
-        onStatusCallback (ASRThreadPoolJobStatus::loadingModel);
-
-        if (! asrEngine.loadModel (options->modelName.toStdString()))
-        {
-            onStatusCallback (ASRThreadPoolJobStatus::failed);
-            onCompleteCallback ({ true, "Failed to load model", {} });
-            return jobHasFinished;
-        }
-
-        if (aborting())
-            return jobHasFinished;
 
         DBG ("Transcribing audio data");
         onStatusCallback (ASRThreadPoolJobStatus::transcribing);
@@ -117,7 +74,16 @@ public:
         DBG ("ASR options: " + options->toJSON());
 
         std::vector<ASRSegment> segments;
-        bool result = asrEngine.transcribe (audioData, *options, segments, isAborted);
+        bool result = asrEngine.transcribe (audioData, *options, segments, isAborted,
+            [this] (const juce::String& message)
+            {
+                if (message.containsIgnoreCase ("download") || message.containsIgnoreCase ("checking model"))
+                    onStatusCallback (ASRThreadPoolJobStatus::downloadingModel);
+                else if (message.containsIgnoreCase ("loading model"))
+                    onStatusCallback (ASRThreadPoolJobStatus::loadingModel);
+                else
+                    onStatusCallback (ASRThreadPoolJobStatus::transcribing);
+            });
 
         if (aborting())
             return jobHasFinished;
@@ -132,7 +98,7 @@ public:
         {
             DBG ("Transcription failed");
             onStatusCallback (ASRThreadPoolJobStatus::failed);
-            onCompleteCallback ({ true, "Transcription failed", {} });
+            onCompleteCallback ({ true, asrEngine.getError().toStdString(), {} });
         }
 
         return jobHasFinished;

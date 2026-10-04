@@ -44,7 +44,7 @@ jobs:
           - name: macOS
             os: macos-15
             pluginval-binary: pluginval.app/Contents/MacOS/pluginval
-            extra-flags: -G Ninja -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+            extra-flags: -G Ninja -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" -DREASPEECH_LIBRARY=Builds/reaspeech-universal/libreaspeech.a
           - name: Windows
             os: windows-latest
             pluginval-binary: ./pluginval.exe
@@ -53,13 +53,13 @@ jobs:
             cuda: true
             cuda-version: '12.5.0'
             release-only: true
-            extra-flags: -DGGML_CUDA=1 -DGGML_STATIC=1 -DCMAKE_CUDA_ARCHITECTURES=all
+            extra-flags: -DREASPEECH_FEATURES=cuda
           - name: WindowsCUDA13
             os: windows-2022
             cuda: true
             cuda-version: '13.1.0'
             release-only: true
-            extra-flags: -DGGML_CUDA=1 -DGGML_STATIC=1 -DCMAKE_CUDA_ARCHITECTURES="75-real;80-real;86-real;89-real;90-real;100-real;100-virtual"
+            extra-flags: -DREASPEECH_FEATURES=cuda
 
     steps:
       - name: Check if build should be skipped
@@ -137,6 +137,10 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Setup Rust
+        if: env.SHOULD_SKIP != 'true'
+        uses: dtolnay/rust-toolchain@stable
+
       - name: Setup Node.js
         if: env.SHOULD_SKIP != 'true'
         uses: actions/setup-node@v4
@@ -174,9 +178,18 @@ jobs:
       #     dev-id-installer-cert: ${{ secrets.DEV_ID_INSTALLER_CERT }}
       #     dev-id-installer-password: ${{ secrets.DEV_ID_INSTALLER_PASSWORD }}
 
+      - name: Build universal ReaSpeech C API (macOS)
+        if: env.SHOULD_SKIP != 'true' && runner.os == 'macOS'
+        run: |
+          rustup target add aarch64-apple-darwin x86_64-apple-darwin
+          cargo build --manifest-path reaspeech-lib/Cargo.toml --target-dir Builds/reaspeech-rust --release --locked --no-default-features --target aarch64-apple-darwin --features metal
+          cargo build --manifest-path reaspeech-lib/Cargo.toml --target-dir Builds/reaspeech-rust --release --locked --no-default-features --target x86_64-apple-darwin
+          mkdir -p Builds/reaspeech-universal
+          lipo -create Builds/reaspeech-rust/aarch64-apple-darwin/release/libreaspeech.a Builds/reaspeech-rust/x86_64-apple-darwin/release/libreaspeech.a -output Builds/reaspeech-universal/libreaspeech.a
+
       - name: Configure
         if: env.SHOULD_SKIP != 'true'
-        run: cmake -B ${{ env.BUILD_DIR }} -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE}} -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache ${{ matrix.extra-flags }} .
+        run: cmake -B ${{ env.BUILD_DIR }} -DBUILD_ASR_TESTS=ON -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE}} -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache ${{ matrix.extra-flags }} .
 
       - name: Build
         if: env.SHOULD_SKIP != 'true'
