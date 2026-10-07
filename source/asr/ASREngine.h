@@ -186,8 +186,9 @@ public:
                 ASRWord word;
 
                 word.text = SafeUTF8::encode (whisper_full_get_token_text (ctx, i, j));
-                word.start = ((float) whisper_full_get_token_data (ctx, i, j).t0) / 100.0f;
-                word.end = ((float) whisper_full_get_token_data (ctx, i, j).t1) / 100.0f;
+                // Map VAD token times back to the original audio timeline.
+                word.start = ((float) whisper_full_get_token_t0 (ctx, i, j)) / 100.0f;
+                word.end = ((float) whisper_full_get_token_t1 (ctx, i, j)) / 100.0f;
                 word.probability = whisper_full_get_token_p (ctx, i, j);
 
                 if (! segment.words.isEmpty() && ! word.text.isEmpty() && word.text[0] != ' ')
