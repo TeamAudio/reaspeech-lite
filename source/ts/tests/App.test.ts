@@ -1,9 +1,20 @@
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import App from '../src/App';
+import { AudioSource } from '../src/ARA';
 import TranscriptGrid from '../src/TranscriptGrid';
 import fs from 'fs';
 import mockNative from './mocks/MockNative';
 import path from 'path';
+
+const makeAudioSource = (persistentID: string, name: string): AudioSource => ({
+  persistentID,
+  name,
+  sampleRate: 48000,
+  sampleCount: 48000,
+  duration: 1,
+  channelCount: 1,
+  merits64BitSamples: false,
+});
 
 describe('App', () => {
   // Spy on console.warn
@@ -91,7 +102,7 @@ describe('App', () => {
       });
 
       mockNative.getAudioSources.mockResolvedValue([
-        { persistentID: 'audio1', name: 'Audio 1' }
+        makeAudioSource('audio1', 'Audio 1')
       ]);
 
       await app.initTranscript();
@@ -157,7 +168,7 @@ describe('App', () => {
         transcript: {
         groups: [{
           segments: [{ text: 'test', start: 0, end: 1 }],
-          audioSource: { persistentID: 'audio1', name: 'Audio 1' }
+          audioSource: makeAudioSource('audio1', 'Audio 1')
         }]
       }})];
 
@@ -301,16 +312,16 @@ describe('App', () => {
       };
 
       mockNative.getAudioSources.mockResolvedValue([
-        { persistentID: 'audio1', name: 'Audio 1' },
-        { persistentID: 'audio2', name: 'Audio 2' }
+        makeAudioSource('audio1', 'Audio 1'),
+        makeAudioSource('audio2', 'Audio 2')
       ]);
 
       await app.handleAudioSourceAdded({persistentID: 'audio2'});
 
       expect(app.audioSourceGrid.clear).toHaveBeenCalled();
       expect(app.audioSourceGrid.addRows).toHaveBeenCalledWith([
-        { persistentID: 'audio1', name: 'Audio 1' },
-        { persistentID: 'audio2', name: 'Audio 2' }
+        makeAudioSource('audio1', 'Audio 1'),
+        makeAudioSource('audio2', 'Audio 2')
       ]);
       expect(app.audioSourceGrid.setSelectedRowIds).toHaveBeenCalledWith(['audio1']);
       expect(app.audioSourceGrid.setRowSelected).toHaveBeenCalledWith('audio2', true);
@@ -328,14 +339,14 @@ describe('App', () => {
       };
 
       mockNative.getAudioSources.mockResolvedValue([
-        { persistentID: 'audio1', name: 'Audio 1' }
+        makeAudioSource('audio1', 'Audio 1')
       ]);
 
       await app.handleAudioSourceRemoved({persistentID: 'audio2'});
 
       expect(app.audioSourceGrid.clear).toHaveBeenCalled();
       expect(app.audioSourceGrid.addRows).toHaveBeenCalledWith([
-        { persistentID: 'audio1', name: 'Audio 1' }
+        makeAudioSource('audio1', 'Audio 1')
       ]);
       expect(app.audioSourceGrid.setSelectedRowIds).toHaveBeenCalledWith(['audio1']);
       expect(app.audioSourceGrid.setRowSelected).not.toHaveBeenCalled();
@@ -359,7 +370,7 @@ describe('App', () => {
         });
 
       mockNative.getAudioSources.mockResolvedValue([
-        { persistentID: 'audio1', name: 'Audio 1' }
+        makeAudioSource('audio1', 'Audio 1')
       ]);
 
       await app.initTranscript();
@@ -379,7 +390,7 @@ describe('App', () => {
 
       expect(app.audioSourceGrid.clear).toHaveBeenCalled();
       expect(app.audioSourceGrid.addRows).toHaveBeenCalledWith([
-        { persistentID: 'audio1', name: 'Audio 1' }
+        makeAudioSource('audio1', 'Audio 1')
       ]);
       // First, audio1 is expected to be selected, as we restore selection state
       expect(app.audioSourceGrid.setSelectedRowIds).toHaveBeenCalledWith(['audio1']);
@@ -521,8 +532,8 @@ describe('App', () => {
         clear: jest.fn(),
       };
 
-      const audioSource1 = { persistentID: 'audio1', name: 'Audio 1' };
-      const audioSource2 = { persistentID: 'audio2', name: 'Audio 2' };
+      const audioSource1 = makeAudioSource('audio1', 'Audio 1');
+      const audioSource2 = makeAudioSource('audio2', 'Audio 2');
 
       mockNative.getAudioSources.mockResolvedValue([
         audioSource1,
@@ -550,7 +561,7 @@ describe('App', () => {
         addSegments: jest.fn(),
       };
 
-      const audioSource = { persistentID: 'audio1', name: 'Audio 1' };
+      const audioSource = makeAudioSource('audio1', 'Audio 1');
       mockNative.getAudioSources.mockResolvedValue([audioSource]);
 
       const error = 'Test error';
@@ -572,7 +583,7 @@ describe('App', () => {
       };
 
       mockNative.getAudioSources.mockResolvedValue([
-        { persistentID: 'audio1', name: 'Audio 1' }
+        makeAudioSource('audio1', 'Audio 1')
       ]);
 
       await app.clearTranscript();
