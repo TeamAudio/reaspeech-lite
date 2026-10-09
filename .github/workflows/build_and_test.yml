@@ -48,18 +48,20 @@ jobs:
           - name: Windows
             os: windows-latest
             pluginval-binary: ./pluginval.exe
-          - name: WindowsCUDA
+          # Native code avoids PTX JIT requirements on the supported GPU generations.
+          # Keep one generic PTX target for future GPUs; avoid family-specific targets.
+          - name: WindowsCUDA12
             os: windows-2022
             cuda: true
-            cuda-version: '12.5.0'
+            cuda-version: '12.9.1'
             release-only: true
-            extra-flags: -DGGML_CUDA=1 -DGGML_STATIC=1 -DCMAKE_CUDA_ARCHITECTURES=all
+            extra-flags: -DGGML_CUDA=1 -DGGML_STATIC=1 -DCMAKE_CUDA_ARCHITECTURES="50-real;60-real;61-real;70-real;75-real;80-real;86-real;89-real;90-real;100-real;120-real;120-virtual"
           - name: WindowsCUDA13
             os: windows-2022
             cuda: true
             cuda-version: '13.1.0'
             release-only: true
-            extra-flags: -DGGML_CUDA=1 -DGGML_STATIC=1 -DCMAKE_CUDA_ARCHITECTURES="75-real;80-real;86-real;89-real;90-real;100-real;100-virtual"
+            extra-flags: -DGGML_CUDA=1 -DGGML_STATIC=1 -DCMAKE_CUDA_ARCHITECTURES="75-real;80-real;86-real;89-real;90-real;100-real;120-real;120-virtual"
 
     steps:
       - name: Check if build should be skipped

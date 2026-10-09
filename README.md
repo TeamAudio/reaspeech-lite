@@ -56,8 +56,24 @@ possible, as it has a significant impact on processing speed. To use the CUDA
 version, you will need an NVIDIA graphics card, and you will need to install
 the CUDA Toolkit.
 
-* Get the CUDA Toolkit here: [CUDA Toolkit Downloads](https://developer.nvidia.com/cuda-downloads)
-* Download the WindowsCUDA installer here: [Latest Release](https://github.com/TeamAudio/reaspeech-lite/releases/latest)
+Choose a CUDA release that matches your GPU and install the corresponding major
+version of the CUDA Toolkit:
+
+| Installer | Build toolkit | Supported NVIDIA GPU generations |
+| --- | --- | --- |
+| `ReaSpeechLite-<version>-WindowsCUDA12.exe` | CUDA 12.9 Update 1 | Maxwell, Pascal, Volta, Turing, Ampere, Ada, Hopper, Blackwell |
+| `ReaSpeechLite-<version>-WindowsCUDA13.exe` | CUDA 13.1 | Turing, Ampere, Ada, Hopper, Blackwell |
+
+* Get CUDA 12.9 Update 1 here: [CUDA Toolkit Archive](https://developer.nvidia.com/cuda-12-9-1-download-archive)
+* Get CUDA 13.1 here: [CUDA Toolkit Archive](https://developer.nvidia.com/cuda-13-1-0-download-archive)
+* Download the WindowsCUDA12 or WindowsCUDA13 installer here: [Latest Release](https://github.com/TeamAudio/reaspeech-lite/releases/latest)
+
+Keep your NVIDIA driver up to date. CUDA minor-version compatibility has
+[limitations](https://docs.nvidia.com/deploy/cuda-compatibility/minor-version-compatibility.html):
+newer features and PTX JIT compilation can require a newer driver. The CUDA 12
+release retains support for older GPU generations; it does not guarantee that
+every older CUDA 12 driver can run every code path. Both installers replace the
+same plugin, so install only the variant you intend to use.
 
 If you do not have an NVIDIA card, or do not want to install CUDA Toolkit, you
 can download the non-CUDA version instead.
@@ -169,8 +185,11 @@ Then, at the main source directory, run the following:
     # macOS:
     cmake -B build -DCMAKE_BUILD_TYPE=Debug
 
-    # Windows/CUDA:
-    cmake -B build -DCMAKE_BUILD_TYPE=Debug -DGGML_CUDA=1
+    # Windows/CUDA 12 (with CUDA 12.9 Update 1 installed):
+    cmake -B build-cuda12 -DCMAKE_BUILD_TYPE=Debug -DGGML_CUDA=1 "-DCUDAToolkit_ROOT=C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.9"
+
+    # Windows/CUDA 13 (with CUDA 13.1 installed):
+    cmake -B build-cuda13 -DCMAKE_BUILD_TYPE=Debug -DGGML_CUDA=1 "-DCUDAToolkit_ROOT=C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v13.1"
 
     # Linux/CUDA:
     cmake -B build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DGGML_CUDA=1
@@ -178,6 +197,16 @@ Then, at the main source directory, run the following:
 You should now be able to build the plugin with:
 
     cmake --build build
+
+For a Windows CUDA build, use `build-cuda12` or `build-cuda13` in place of
+`build` in the build command and output paths. Keep separate build directories
+when switching toolkits so CMake does not reuse a cached CUDA compiler.
+
+The release workflow pins each toolkit and supplies explicit CUDA architecture
+lists. CUDA 12 includes native targets 50, 60, 61, 70, 75, 80, 86, 89, 90, 100,
+and 120; CUDA 13 starts at 75. Both include only one PTX target, 120, for forward
+compatibility. Generic Blackwell targets 100 and 120 cover data center and RTX
+GPUs without requiring family-specific `f` architecture support in CMake.
 
 After a successful build, the VST3 plugin will be placed in the
 build/ReaSpeechLite_artefacts/Debug/VST3 directory. You can either add this
