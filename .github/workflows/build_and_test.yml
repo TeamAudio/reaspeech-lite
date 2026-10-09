@@ -55,7 +55,7 @@ jobs:
             release-only: true
             extra-flags: -DGGML_CUDA=1 -DGGML_STATIC=1 -DCMAKE_CUDA_ARCHITECTURES=all
           - name: WindowsCUDA13
-            os: windows-latest
+            os: windows-2022
             cuda: true
             cuda-version: '13.1.0'
             release-only: true
