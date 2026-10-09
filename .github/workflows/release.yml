@@ -22,6 +22,11 @@ on:
         required: true
         default: 'Release body content goes here'
 
+# All pushes/PRs happen in other repos via the service token; this workflow
+# needs nothing from its own repo token.
+permissions:
+  contents: read
+
 jobs:
   publish-release-notes:
     runs-on: ubuntu-latest
@@ -35,6 +40,8 @@ jobs:
           ref: main
           fetch-depth: 0  # Fetch all history for accurate versioning
           token: ${{ secrets.PUBLISH_RELEASE_SERVICE_TOKEN}}
+          # This checkout only resolves the action; it never pushes.
+          persist-credentials: false
           path: techaudio-web
 
       - name: Call publish-release action
