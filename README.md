@@ -185,11 +185,8 @@ Then, at the main source directory, run the following:
     # macOS:
     cmake -B build -DCMAKE_BUILD_TYPE=Debug
 
-    # Windows/CUDA 12 (with CUDA 12.9 Update 1 installed):
-    cmake -B build-cuda12 -DCMAKE_BUILD_TYPE=Debug -DGGML_CUDA=1 "-DCUDAToolkit_ROOT=C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.9"
-
-    # Windows/CUDA 13 (with CUDA 13.1 installed):
-    cmake -B build-cuda13 -DCMAKE_BUILD_TYPE=Debug -DGGML_CUDA=1 "-DCUDAToolkit_ROOT=C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v13.1"
+    # Windows/CUDA:
+    cmake -B build -DCMAKE_BUILD_TYPE=Debug -DGGML_CUDA=1
 
     # Linux/CUDA:
     cmake -B build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DGGML_CUDA=1
@@ -197,10 +194,6 @@ Then, at the main source directory, run the following:
 You should now be able to build the plugin with:
 
     cmake --build build
-
-For a Windows CUDA build, use `build-cuda12` or `build-cuda13` in place of
-`build` in the build command and output paths. Keep separate build directories
-when switching toolkits so CMake does not reuse a cached CUDA compiler.
 
 The release workflow pins each toolkit and supplies explicit CUDA architecture
 lists. CUDA 12 includes native targets 50, 60, 61, 70, 75, 80, 86, 89, 90, 100,
