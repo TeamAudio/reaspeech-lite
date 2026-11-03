@@ -199,7 +199,7 @@ jobs:
       - name: Test & Benchmarks
         if: env.SHOULD_SKIP != 'true'
         working-directory: ${{ env.BUILD_DIR }}
-        run: ctest --verbose --output-on-failure
+        run: ctest --build-config ${{ env.BUILD_TYPE }} --verbose --output-on-failure
 
       - name: Read in .env from CMake # see GitHubENV.cmake
         if: env.SHOULD_SKIP != 'true'
