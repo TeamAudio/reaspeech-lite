@@ -1,6 +1,10 @@
 # Ask rustc for the native dependencies of the selected staticlib. Cargo's JSON
 # build-script messages provide the active native library search directories.
 set(_features)
+if(MACOS_DEPLOYMENT_TARGET)
+    # Apply the plugin's minimum OS version to Rust and native build scripts.
+    set(ENV{MACOSX_DEPLOYMENT_TARGET} "${MACOS_DEPLOYMENT_TARGET}")
+endif()
 if(FEATURES)
     list(APPEND _features --features "${FEATURES}")
 endif()

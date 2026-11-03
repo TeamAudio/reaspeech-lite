@@ -124,7 +124,7 @@ jobs:
         if: env.SHOULD_SKIP != 'true' && runner.os == 'macOS'
         run: brew install ninja osxutils
 
-      # Pinned because Xcode 26's supported deployment range starts at macOS 11, and we target 10.15
+      # Keep the CI toolchain pinned for reproducible macOS builds.
       - name: Use Xcode 16.2 (macOS)
         if: env.SHOULD_SKIP != 'true' && runner.os == 'macOS'
         uses: maxim-lobanov/setup-xcode@v1
@@ -180,6 +180,8 @@ jobs:
 
       - name: Build universal ReaSpeech C API (macOS)
         if: env.SHOULD_SKIP != 'true' && runner.os == 'macOS'
+        env:
+          MACOSX_DEPLOYMENT_TARGET: "13.4"
         run: |
           rustup target add aarch64-apple-darwin x86_64-apple-darwin
           cargo build --manifest-path reaspeech-lib/Cargo.toml --target-dir Builds/reaspeech-rust --release --locked --no-default-features --target aarch64-apple-darwin --features metal

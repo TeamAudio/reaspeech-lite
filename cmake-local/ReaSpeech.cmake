@@ -26,6 +26,7 @@ if(NOT REASPEECH_LIBRARY)
             "-DFEATURES=${REASPEECH_FEATURES}" "-DMSVC=${MSVC}"
             "-DC_COMPILER=${CMAKE_C_COMPILER}" "-DNATIVE_OBJECT=${_native_object}"
             "-DRESPONSE=${_native_response}"
+            "-DMACOS_DEPLOYMENT_TARGET=${CMAKE_OSX_DEPLOYMENT_TARGET}"
             -P "${CMAKE_CURRENT_LIST_DIR}/BuildReaSpeech.cmake"
         BYPRODUCTS "${_library}" "${_native_response}" "${_native_object}"
         COMMENT "Building ReaSpeech Lib static C API" VERBATIM)

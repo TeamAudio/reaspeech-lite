@@ -10,7 +10,8 @@ include(PamplejuceVersion)
 
 # Configures universal binaries and decides which version of macOS to support
 include(PamplejuceMacOS)
-set(CMAKE_OSX_DEPLOYMENT_TARGET "10.15" CACHE STRING "" FORCE)
+# The prebuilt ONNX Runtime objects embedded in ReaSpeech require macOS 13.4.
+set(CMAKE_OSX_DEPLOYMENT_TARGET "13.4" CACHE STRING "" FORCE)
 
 include(JUCEDefaults)
 
