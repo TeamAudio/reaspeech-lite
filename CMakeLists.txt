@@ -114,10 +114,15 @@ target_link_libraries(SharedCode
     juce_gui_basics
     juce_gui_extra
     juce::juce_recommended_config_flags
-    juce::juce_recommended_lto_flags
     juce::juce_recommended_warning_flags
     ReaSpeech
 )
+
+# Linux's LLVMgold plugin may be older than the LLVM used by Rust. Avoid
+# feeding the Rust static archive to that plugin through C++'s -flto option.
+if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    target_link_libraries(SharedCode INTERFACE juce::juce_recommended_lto_flags)
+endif()
 
 # Link the JUCE plugin targets with our SharedCode target
 target_link_libraries("${PROJECT_NAME}" PRIVATE SharedCode)

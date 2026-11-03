@@ -78,6 +78,9 @@ the Metal framework for GPU acceleration.
 
 ### Linux
 
+Linux releases are built on Ubuntu 24.04. Use Ubuntu 24.04 or a compatible
+newer distribution; Ubuntu 22.04's glibc is too old for the bundled ONNX Runtime.
+
 A CUDA version is also available for Linux. Depending on your Linux
 distribution, you may be able to download it using your package manager with a
 command like:
