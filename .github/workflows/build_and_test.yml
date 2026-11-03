@@ -185,7 +185,7 @@ jobs:
         run: |
           rustup target add aarch64-apple-darwin
           cargo build --manifest-path reaspeech-lib/Cargo.toml --target-dir Builds/reaspeech-rust --release --locked --no-default-features --target aarch64-apple-darwin --features metal
-          lipo -verify_arch arm64 Builds/reaspeech-rust/aarch64-apple-darwin/release/libreaspeech.a
+          lipo Builds/reaspeech-rust/aarch64-apple-darwin/release/libreaspeech.a -verify_arch arm64
 
       - name: Configure
         if: env.SHOULD_SKIP != 'true'
