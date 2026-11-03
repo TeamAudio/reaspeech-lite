@@ -41,13 +41,15 @@ public:
         juce::ARAAudioSource* audioSourceIn,
         std::unique_ptr<ASROptions> optionsIn,
         std::function<void (ASRThreadPoolJobStatus)> onStatus,
-        std::function<void (const ASRThreadPoolJobResult&)> onComplete
+        std::function<void (const ASRThreadPoolJobResult&)> onComplete,
+        std::function<void (const ASRSegment&)> onSegment = {}
     ) : ThreadPoolJob ("ASR Threadpool Job"),
         asrEngine (asrEngineIn),
         audioSource (audioSourceIn),
         options (std::move (optionsIn)),
         onStatusCallback (onStatus),
-        onCompleteCallback (onComplete)
+        onCompleteCallback (onComplete),
+        onSegmentCallback (onSegment)
     {
     }
 
@@ -83,7 +85,7 @@ public:
                     onStatusCallback (ASRThreadPoolJobStatus::loadingModel);
                 else
                     onStatusCallback (ASRThreadPoolJobStatus::transcribing);
-            });
+            }, onSegmentCallback);
 
         if (aborting())
             return jobHasFinished;
@@ -127,6 +129,8 @@ private:
     std::unique_ptr<ASROptions> options;
     std::function<void (ASRThreadPoolJobStatus)> onStatusCallback;
     std::function<void (const ASRThreadPoolJobResult&)> onCompleteCallback;
+
+    std::function<void (const ASRSegment&)> onSegmentCallback;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ASRThreadPoolJob)
 };

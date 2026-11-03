@@ -40,8 +40,9 @@ export default class TranscriptGrid {
   }
 
   addSegments(segments: Segment[], audioSource: AudioSource) {
+    const offset = this.rowData.filter(row => row.sourceID === audioSource.persistentID).length;
     const rows: TranscriptRow[] = segments.map((segment, index) => ({
-      id: audioSource.persistentID + '-' + index,
+      id: audioSource.persistentID + '-' + (offset + index),
       start: segment.start,
       end: segment.end,
       playbackStart: segment.start,

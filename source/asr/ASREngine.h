@@ -30,7 +30,8 @@ public:
     }
     bool transcribe (const std::vector<float>& audioData, ASROptions& options,
                      std::vector<ASRSegment>& segments, std::function<bool()> isAborted,
-                     std::function<void(const juce::String&)> onProgress = {})
+                     std::function<void(const juce::String&)> onProgress = {},
+                     std::function<void(const ASRSegment&)> onSegment = {})
     {
         errorMessage.clear();
         progress.store (0);
@@ -87,6 +88,7 @@ public:
                         segment.words.add ({ word["word"].toString().trim(), static_cast<float> (word["start"]),
                                              static_cast<float> (word["end"]), static_cast<float> (word["probability"]) });
                 result.push_back (std::move (segment));
+                if (onSegment) onSegment (result.back());
             }
             else if (type == "completed")
             {

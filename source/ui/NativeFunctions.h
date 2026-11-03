@@ -255,6 +255,12 @@ public:
         juce::DynamicObject::Ptr result = new juce::DynamicObject();
         result->setProperty ("status", status);
         result->setProperty ("progress", progress);
+        {
+            std::lock_guard<std::mutex> lock (streamMutex);
+            result->setProperty ("requestID", streamRequestID);
+            result->setProperty ("segments", pendingSegments);
+            pendingSegments.clear();
+        }
         complete (juce::var (result.get()));
     }
 
@@ -420,6 +426,11 @@ public:
         const auto audioSourcePersistentID = args[0].toString();
         if (auto* audioSource = getAudioSourceByPersistentID (audioSourcePersistentID))
         {
+            {
+                std::lock_guard<std::mutex> lock (streamMutex);
+                streamRequestID = args.size() > 2 ? args[2].toString() : juce::String();
+                pendingSegments.clear();
+            }
             auto* job = new ASRThreadPoolJob (
                 *asrEngine,
                 audioSource,
@@ -439,6 +450,10 @@ public:
                         obj->setProperty ("segments", segments);
                         complete (juce::var (obj.get()));
                     }
+                },
+                [this] (const ASRSegment& segment) {
+                    std::lock_guard<std::mutex> lock (streamMutex);
+                    pendingSegments.add (segment.toDynamicObject(false).get());
                 }
             );
             threadPool.addJob (job, true);
@@ -580,6 +595,9 @@ private:
 
     std::unique_ptr<ASREngine> asrEngine;
     std::atomic<ASRThreadPoolJobStatus> asrStatus;
+    std::mutex streamMutex;
+    juce::String streamRequestID;
+    juce::Array<juce::var> pendingSegments;
     juce::ThreadPool threadPool { 1 };
 
     std::unique_ptr<juce::FileChooser> fileChooser;

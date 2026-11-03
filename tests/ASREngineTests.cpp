@@ -56,7 +56,15 @@ int main()
         events = { R"({"type":"started"})", R"({"type":"progress","completed":1,"total":2})",
                    R"({"type":"segment","segment":{"startMs":1250,"endMs":2500,"text":" Hello world ","words":[{"word":"Hello","start":1.25,"end":1.75,"probability":0.8},{"word":"world","start":1.75,"end":2.5,"probability":0.9}]}})",
                    R"({"type":"completed"})" };
-        require (engine.transcribe (audio, options, segments, [] { return false; }), "Successful job must return true");
+        int streamed = 0;
+        require (engine.transcribe (audio, options, segments, [] { return false; }, {},
+            [&] (const ASRSegment& segment) {
+                require (!events.empty() && segments.empty(), "Segments must stream before completion");
+                require (segment.text == "Hello world" && segment.start == 1.25f,
+                         "Streamed segments must use converted text and timestamps");
+                ++streamed;
+            }), "Successful job must return true");
+        require (streamed == 1, "Each segment must stream once");
         require (automaticLanguage, "Auto language must be omitted");
         require (segments.size() == 1 && segments[0].text == "Hello world" && segments[0].start == 1.25f
                  && segments[0].end == 2.5f && segments[0].words.size() == 2 && segments[0].words[0].probability == 0.8f
