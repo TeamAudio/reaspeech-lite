@@ -8,8 +8,17 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake-local")
 
 include(PamplejuceVersion)
 
-# Configures universal binaries and decides which version of macOS to support
+# Configures the macOS architecture and minimum supported version
 include(PamplejuceMacOS)
+# Override the upstream CI default of universal binaries before project().
+if((CMAKE_HOST_APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Darwin") AND NOT (CMAKE_SYSTEM_NAME STREQUAL "iOS"))
+    get_property(_macos_architectures CACHE CMAKE_OSX_ARCHITECTURES PROPERTY VALUE)
+    if(_macos_architectures AND NOT _macos_architectures STREQUAL "arm64")
+        message(FATAL_ERROR "ReaSpeech Lite supports only arm64 on macOS. Configure with -DCMAKE_OSX_ARCHITECTURES=arm64.")
+    endif()
+    set(CMAKE_OSX_ARCHITECTURES arm64 CACHE STRING "macOS architecture" FORCE)
+    set(CMAKE_OSX_ARCHITECTURES arm64)
+endif()
 # The prebuilt ONNX Runtime objects embedded in ReaSpeech require macOS 13.4.
 set(CMAKE_OSX_DEPLOYMENT_TARGET "13.4" CACHE STRING "" FORCE)
 

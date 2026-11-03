@@ -158,8 +158,9 @@ You will need to install a few dependencies:
 * [NPM](https://www.npmjs.com/) - for ease of use, we recommend using [Node Version Manager](https://github.com/nvm-sh/nvm)
 * To build on Linux, please see [JUCE Dependencies on Linux](https://github.com/juce-framework/JUCE/blob/master/docs/Linux%20Dependencies.md)
 
-The macOS build requires macOS 13.4 or newer, matching the prebuilt ONNX
-Runtime dependency embedded in ReaSpeech.
+The macOS plugin supports Apple Silicon (arm64) Macs running macOS 13.4 or
+newer, matching the prebuilt ONNX Runtime dependency embedded in ReaSpeech.
+Intel Macs are no longer supported. Run your DAW natively on Apple Silicon.
 
 With these dependencies installed, first build the TypeScript code:
 
