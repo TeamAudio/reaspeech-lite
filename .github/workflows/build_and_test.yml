@@ -49,7 +49,7 @@ jobs:
           - name: Windows
             os: windows-latest
             pluginval-binary: ./pluginval.exe
-          - name: WindowsCUDA
+          - name: WindowsCUDA12
             os: windows-2022
             cuda: true
             cuda-version: '12.5.0'
