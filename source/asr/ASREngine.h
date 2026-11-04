@@ -23,7 +23,7 @@ public:
 #ifdef _WIN32
                 _putenv_s ("MODELS_PATH", modelsDir.c_str());
 #else
-                setenv ("MODELS_PATH", modelsDir.c_str(), 0);
+                setenv ("MODELS_PATH", modelsDir.c_str(), 1);
 #endif
             }
         });
