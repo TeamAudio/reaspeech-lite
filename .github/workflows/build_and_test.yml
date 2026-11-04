@@ -64,7 +64,7 @@ jobs:
           - name: WindowsCUDA12
             os: windows-2022
             cuda: true
-            cuda-version: '12.5.0'
+            cuda-version: '12.9.1'
             release-only: true
             extra-flags: -DREASPEECH_FEATURES=cuda
           - name: WindowsCUDA13
