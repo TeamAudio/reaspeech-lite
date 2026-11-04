@@ -1,12 +1,15 @@
 #pragma once
+
 #include <algorithm>
 #include <atomic>
 #include <cstdlib>
 #include <functional>
 #include <mutex>
 #include <vector>
+
 #include <juce_audio_formats/juce_audio_formats.h>
 #include <reaspeech.h>
+
 #include "ASROptions.h"
 #include "ASRSegment.h"
 
@@ -28,30 +31,42 @@ public:
             }
         });
     }
-    bool transcribe (const std::vector<float>& audioData, ASROptions& options,
-                     std::vector<ASRSegment>& segments, std::function<bool()> isAborted,
-                     std::function<void(const juce::String&)> onProgress = {},
-                     std::function<void(const ASRSegment&)> onSegment = {})
+
+    bool transcribe (
+        const std::vector<float>& audioData,
+        ASROptions& options,
+        std::vector<ASRSegment>& segments,
+        std::function<bool()> isAborted,
+        std::function<void(const juce::String&)> onProgress = {},
+        std::function<void(const ASRSegment&)> onSegment = {})
     {
         errorMessage.clear();
         progress.store (0);
+
         if (isAborted()) return false;
+
         auto* properties = new juce::DynamicObject();
         juce::var jobOptions (properties);
+
         properties->setProperty ("model", options.modelName);
         if (options.language.isNotEmpty() && options.language != "auto")
             properties->setProperty ("language", options.language);
         properties->setProperty ("translate", options.translate);
         properties->setProperty ("vad", options.vad);
         properties->setProperty ("words", true);
+
         const auto optionsJson = juce::JSON::toString (jobOptions).toStdString();
+
         char jobId[256] {};
+
         // The C API copies the mono 16 kHz PCM before returning.
         if (! reaspeech_start_from_memory (audioData.data(), audioData.size(), 16000, 1,
-                                          optionsJson.c_str(), jobId, sizeof (jobId)))
+                                           optionsJson.c_str(), jobId, sizeof (jobId)))
             return fail (juce::String::fromUTF8 (jobId));
+
         bool cancelling = false;
         std::vector<ASRSegment> result;
+
         for (;;)
         {
             if (! cancelling && isAborted())
@@ -59,15 +74,23 @@ public:
                 reaspeech_cancel (jobId);
                 cancelling = true;
             }
+
             juce::String json;
             {
                 // The C API return buffer is shared. Copy it while locked.
                 std::lock_guard<std::mutex> lock (pollMutex);
                 json = juce::String::fromUTF8 (reaspeech_poll (jobId));
             }
-            if (json.isEmpty()) { juce::Thread::sleep (50); continue; }
+
+            if (json.isEmpty())
+            {
+                juce::Thread::sleep (50);
+                continue;
+            }
+
             const auto event = juce::JSON::parse (json);
             const auto type = event["type"].toString();
+
             if (type == "progress")
             {
                 if (onProgress) onProgress (event["message"].toString());
@@ -101,12 +124,20 @@ public:
             else if (type == "error") return fail (event["error"].toString());
         }
     }
+
     int getProgress() const { return progress.load(); }
     juce::String getError() const { return errorMessage; }
+
 private:
-    bool fail (const juce::String& message) { errorMessage = message; return false; }
+    bool fail (const juce::String& message)
+    {
+        errorMessage = message;
+        return false;
+    }
+
     inline static std::mutex pollMutex;
     inline static std::once_flag cacheInitialized;
+
     std::atomic<int> progress { 0 };
     juce::String errorMessage;
 };
