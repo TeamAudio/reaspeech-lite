@@ -42,6 +42,18 @@ jobs:
             os: ubuntu-24.04
             pluginval-binary: ./pluginval
             extra-flags: -G Ninja
+          - name: LinuxCUDA12
+            os: ubuntu-24.04
+            cuda: true
+            cuda-version: '12.9.1'
+            release-only: true
+            extra-flags: -G Ninja -DREASPEECH_FEATURES=cuda
+          - name: LinuxCUDA13
+            os: ubuntu-24.04
+            cuda: true
+            cuda-version: '13.1.0'
+            release-only: true
+            extra-flags: -G Ninja -DREASPEECH_FEATURES=cuda
           - name: macOS
             os: macos-15
             pluginval-binary: pluginval.app/Contents/MacOS/pluginval
@@ -86,6 +98,18 @@ jobs:
         uses: Jimver/cuda-toolkit@v0.2.30
         with:
           cuda: ${{ matrix.cuda-version }}
+          linux-local-args: '["--toolkit"]'
+
+      - name: Configure Linux CUDA compilation
+        if: env.SHOULD_SKIP != 'true' && runner.os == 'Linux' && matrix.cuda
+        run: |
+          # Compile without probing a GPU. Both toolkits support compute 7.5.
+          echo "CUDA_COMPUTE_CAP=75" >> "$GITHUB_ENV"
+          # Preserve PTX in the native kernel archive for newer GPU generations.
+          echo "NVCC_APPEND_FLAGS=-gencode=arch=compute_75,code=compute_75" >> "$GITHUB_ENV"
+          # Pin nvcc's host compiler independently of the plugin's Clang version.
+          sudo apt-get update && sudo apt-get install -y g++-13
+          echo "NVCC_CCBIN=/usr/bin/g++-13" >> "$GITHUB_ENV"
 
       # This also starts up our "fake" display (Xvfb), needed for pluginval
       - name: Install JUCE Linux Deps
@@ -199,7 +223,14 @@ jobs:
       - name: Test & Benchmarks
         if: env.SHOULD_SKIP != 'true'
         working-directory: ${{ env.BUILD_DIR }}
-        run: ctest --build-config ${{ env.BUILD_TYPE }} --verbose --output-on-failure
+        run: |
+          if [[ "${{ runner.os }}" == "Linux" && "${{ matrix.cuda }}" == "true" ]]; then
+            # Hosted runners can compile against the CUDA driver stub, but cannot
+            # load the CUDA-linked executable without the real NVIDIA driver.
+            ctest --build-config ${{ env.BUILD_TYPE }} --verbose --output-on-failure --exclude-regex '^ReaSpeechRuntimeTests$'
+          else
+            ctest --build-config ${{ env.BUILD_TYPE }} --verbose --output-on-failure
+          fi
 
       - name: Read in .env from CMake # see GitHubENV.cmake
         if: env.SHOULD_SKIP != 'true'
