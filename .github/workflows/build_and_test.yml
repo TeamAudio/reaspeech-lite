@@ -100,13 +100,17 @@ jobs:
           cuda: ${{ matrix.cuda-version }}
           linux-local-args: '["--toolkit"]'
 
-      - name: Configure Linux CUDA compilation
-        if: env.SHOULD_SKIP != 'true' && runner.os == 'Linux' && matrix.cuda
+      - name: Configure CUDA compilation
+        if: env.SHOULD_SKIP != 'true' && matrix.cuda
         run: |
           # Compile without probing a GPU. Both toolkits support compute 7.5.
           echo "CUDA_COMPUTE_CAP=75" >> "$GITHUB_ENV"
           # Preserve PTX in the native kernel archive for newer GPU generations.
           echo "NVCC_APPEND_FLAGS=-gencode=arch=compute_75,code=compute_75" >> "$GITHUB_ENV"
+
+      - name: Configure Linux CUDA host compiler
+        if: env.SHOULD_SKIP != 'true' && runner.os == 'Linux' && matrix.cuda
+        run: |
           # Pin nvcc's host compiler independently of the plugin's Clang version.
           sudo apt-get update && sudo apt-get install -y g++-13
           echo "NVCC_CCBIN=/usr/bin/g++-13" >> "$GITHUB_ENV"
@@ -224,9 +228,9 @@ jobs:
         if: env.SHOULD_SKIP != 'true'
         working-directory: ${{ env.BUILD_DIR }}
         run: |
-          if [[ "${{ runner.os }}" == "Linux" && "${{ matrix.cuda }}" == "true" ]]; then
-            # Hosted runners can compile against the CUDA driver stub, but cannot
-            # load the CUDA-linked executable without the real NVIDIA driver.
+          if [[ "${{ matrix.cuda }}" == "true" ]]; then
+            # Hosted CUDA runners have a toolkit but no NVIDIA driver/GPU, so
+            # only run the adapter tests that do not load the CUDA backend.
             ctest --build-config ${{ env.BUILD_TYPE }} --verbose --output-on-failure --exclude-regex '^ReaSpeechRuntimeTests$'
           else
             ctest --build-config ${{ env.BUILD_TYPE }} --verbose --output-on-failure
