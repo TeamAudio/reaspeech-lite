@@ -174,7 +174,7 @@ With these dependencies installed, first build the TypeScript code:
 Then, at the main source directory, run the following:
 
     # macOS:
-    cmake -B build -DCMAKE_BUILD_TYPE=Debug
+    cmake -B build -DCMAKE_BUILD_TYPE=Debug -DREASPEECH_FEATURES=metal
 
     # Windows/CUDA:
     cmake -B build -DCMAKE_BUILD_TYPE=Debug -DREASPEECH_FEATURES=cuda
