@@ -77,9 +77,9 @@ jobs:
     steps:
       - name: Check if build should be skipped
         run: |
-          if [[ "${{ matrix.release-only }}" == "true" && "${{ github.ref }}" != *"tags/v"* ]]; then
+          if [[ "${{ matrix.release-only }}" == "true" && "${{ github.event_name }}" != "workflow_dispatch" && "${{ github.ref }}" != refs/tags/v* ]]; then
             echo "SHOULD_SKIP=true" >> $GITHUB_ENV
-            echo "::notice::Build '${{ matrix.name }}' will be skipped - only runs on releases (tags starting with 'v')"
+            echo "::notice::Build '${{ matrix.name }}' will be skipped - only runs on version tags or manual workflow runs"
           fi
 
       # Set up MSVC toolchain and developer command prompt (Windows)
@@ -354,7 +354,7 @@ jobs:
           path: packaging/${{ env.ARTIFACT_NAME }}.pkg
 
   release:
-    if: contains(github.ref, 'tags/v')
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     needs: build_and_test
 
