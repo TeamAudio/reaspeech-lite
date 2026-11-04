@@ -40,6 +40,17 @@ describe('TranscriptGrid', () => {
     grid = new TranscriptGrid('#grid', onPlayAt);
   });
 
+  it('appends streamed batches with unique IDs for each source', () => {
+    const source = makeAudioSource('Audio', 'source');
+    const segment = { start: 0, end: 1, text: 'Hello', score: 0.9 };
+    grid.addSegments([segment], source);
+    grid.addSegments([segment], source);
+    expect(grid.getRows().map(row => row.id)).toEqual(['source-0', 'source-1']);
+    grid.removeRowsBySourceID('source');
+    grid.addSegments([segment], source);
+    expect(grid.getRows().map(row => row.id)).toEqual(['source-0']);
+  });
+
   it('should initialize with correct selector and callback', () => {
     expect(document.querySelector).toHaveBeenCalledWith('#grid');
     expect(grid['onPlayAt']).toBe(onPlayAt);

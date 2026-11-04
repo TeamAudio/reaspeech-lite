@@ -550,6 +550,32 @@ describe('App', () => {
       expect(mockNative.setAudioSourceTranscript).toHaveBeenCalledWith('audio2', { segments });
     });
 
+    it('shows streamed batches before completion and ignores stale status replies', async () => {
+      const app = new App();
+      const source = makeAudioSource('audio1', 'Audio 1');
+      const stream = { requestID: '1', source, started: false };
+      (app as any).activeStream = stream;
+      app.processing = true;
+      app.transcriptGrid = {
+        addSegments: jest.fn(), removeRowsBySourceID: jest.fn(),
+      } as any;
+      const segments = [{ text: 'Hello', start: 0, end: 1, score: 0.9 }];
+      mockNative.getTranscriptionStatus.mockResolvedValue({
+        status: 'Transcribing', progress: 20, requestID: '1', segments,
+      });
+      await app.updateTranscriptionStatus();
+      await app.updateTranscriptionStatus();
+      expect(app.transcriptGrid.removeRowsBySourceID).toHaveBeenCalledTimes(1);
+      expect(app.transcriptGrid.addSegments).toHaveBeenCalledWith(segments, source);
+      let resolveStatus: (value: any) => void;
+      mockNative.getTranscriptionStatus.mockReturnValue(new Promise(resolve => { resolveStatus = resolve; }));
+      const pending = app.updateTranscriptionStatus();
+      (app as any).activeStream = undefined;
+      resolveStatus({ status: 'Transcribing', progress: 30, requestID: '1', segments });
+      await pending;
+      expect(app.transcriptGrid.addSegments).toHaveBeenCalledTimes(2);
+    });
+
     it('handles process errors', async () => {
       const app = new App();
 

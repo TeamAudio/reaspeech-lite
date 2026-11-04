@@ -22,6 +22,8 @@ export default class App {
   private native: Native;
 
   processing: boolean = false;
+  private streamSequence = 0;
+  private activeStream?: { requestID: string; source: AudioSource; started: boolean };
   state: any;
 
   audioSourceGrid: AudioSourceGrid;
@@ -302,12 +304,20 @@ export default class App {
 
         const audioSource = audioSources.shift();
 
-        return this.native.transcribeAudioSource(audioSource.persistentID, asrOptions).then((result) => {
+        const stream = { requestID: String(++this.streamSequence), source: audioSource, started: false };
+        this.activeStream = stream;
+        return this.native.transcribeAudioSource(audioSource.persistentID, asrOptions, stream.requestID).then((result) => {
+          if (this.activeStream === stream) this.activeStream = undefined;
           if (!this.processing) {
             return Promise.resolve();
           }
 
           if (result.error) {
+            if (stream.started) return this.mergeTranscript(audioSource).then(() => {
+              this.showAlert('danger', '<b>Error:</b> ' + htmlEscape(result.error));
+              audioSources.length = 0;
+              return processNextAudioSource();
+            });
             this.showAlert('danger', '<b>Error:</b> ' + htmlEscape(result.error));
             audioSources.length = 0;
             return processNextAudioSource();
@@ -324,6 +334,7 @@ export default class App {
   }
 
   handleCancel(retriesLeft = 100) {
+    this.activeStream = undefined;
     this.setProcessing(false);
     this.hideCancel();
     this.hideSpinner();
@@ -402,7 +413,17 @@ export default class App {
       this.setProgress(0);
       return Promise.resolve();
     }
+    const stream = this.activeStream;
     return this.native.getTranscriptionStatus().then((status) => {
+      if (!this.processing || stream !== this.activeStream) return;
+      if (stream && status.requestID === stream.requestID && status.segments?.length) {
+        if (!stream.started) {
+          this.transcriptGrid.removeRowsBySourceID(stream.source.persistentID);
+          stream.started = true;
+        }
+        this.transcriptGrid.addSegments(status.segments, stream.source);
+        this.showTranscript();
+      }
       if (status.status !== '') {
         this.setProcessText(status.status + '...');
       }

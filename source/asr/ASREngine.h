@@ -1,306 +1,143 @@
 #pragma once
 
-#include <memory>
-#include <string>
+#include <algorithm>
+#include <atomic>
+#include <cstdlib>
+#include <functional>
+#include <mutex>
 #include <vector>
 
-#include <juce_core/juce_core.h>
-#include <whisper.h>
+#include <juce_audio_formats/juce_audio_formats.h>
+#include <reaspeech.h>
 
-#include "../utils/SafeUTF8.h"
 #include "ASROptions.h"
 #include "ASRSegment.h"
 
 class ASREngine
 {
 public:
-    ASREngine (const std::string& modelsDirIn) : modelsDir (modelsDirIn)
+    explicit ASREngine (const std::string& modelsDir)
     {
-        // Create models directory if it doesn't already exist
-        juce::File (modelsDir).createDirectory();
-    }
-
-    ~ASREngine()
-    {
-        DBG ("ASREngine destructor");
-        if (ctx != nullptr)
+        std::call_once (cacheInitialized, [&modelsDir]
         {
-            DBG ("Freeing whisper context");
-            whisper_free (ctx);
-            ctx = nullptr;
-        }
-
-        downloadTask.reset();
-    }
-
-    // Download the model if needed. Returns true if successful or already downloaded.
-    bool downloadModel (const std::string& modelName, std::function<bool ()> isAborted)
-    {
-        return downloadFile (getModelPath (modelName), Config::getModelURL (modelName), "model", isAborted);
-    }
-
-    // Download the VAD model if needed. Returns true if successful or already downloaded.
-    bool downloadVadModel (std::function<bool ()> isAborted)
-    {
-        return downloadFile (getVadModelPath(), Config::getVadModelURL(), "VAD model", isAborted);
-    }
-
-    // Load the model by name. Returns true if successful.
-    bool loadModel (const std::string& modelName)
-    {
-        DBG ("ASREngine::loadModel: " + modelName);
-
-        if (modelName == lastModelName)
-        {
-            DBG ("Model already loaded");
-            return true;
-        }
-
-        if (ctx != nullptr)
-        {
-            DBG ("Freeing whisper context");
-            whisper_free (ctx);
-        }
-
-        std::string modelPath = getModelPath (modelName);
-        DBG ("Loading model from: " + modelPath);
-
-        if (! juce::File (modelPath).exists())
-        {
-            DBG ("Model file not found: " + modelPath);
-            return false;
-        }
-
-        whisper_context_params params = whisper_context_default_params();
-
-#if defined (__APPLE__) && defined (__x86_64__)
-        DBG ("Intel Mac detected, disabling whisper GPU support");
-        params.use_gpu = false;
-        params.flash_attn = false;
-#endif
-
-        ctx = whisper_init_from_file_with_params (modelPath.c_str(), params);
-        if (ctx == nullptr)
-        {
-            DBG ("Failed to load model");
-
-            if (juce::File (modelPath).deleteFile())
+            if (juce::SystemStats::getEnvironmentVariable ("MODELS_PATH", {}).isEmpty())
             {
-                DBG ("Deleted model file");
+                juce::File (modelsDir).createDirectory();
+#ifdef _WIN32
+                _putenv_s ("MODELS_PATH", modelsDir.c_str());
+#else
+                setenv ("MODELS_PATH", modelsDir.c_str(), 1);
+#endif
             }
-
-            return false;
-        }
-
-        DBG ("Model loaded successfully");
-        lastModelName = modelName;
-        return true;
+        });
     }
 
-    // Transcribe the audio data. Returns true if successful.
     bool transcribe (
         const std::vector<float>& audioData,
         ASROptions& options,
         std::vector<ASRSegment>& segments,
-        std::function<bool ()> isAborted)
+        std::function<bool()> isAborted,
+        std::function<void(const juce::String&)> onProgress = {},
+        std::function<void(const ASRSegment&)> onSegment = {})
     {
-        DBG ("ASREngine::transcribe");
-        if (ctx == nullptr)
-        {
-            DBG ("No model loaded");
-            return false;
-        }
-
-        TranscribeCallbackData callbackData { this, isAborted };
-
-        whisper_full_params params = whisper_full_default_params (WHISPER_SAMPLING_GREEDY);
-        params.token_timestamps = true;
-
-        // Storage for strings referenced by params via const char* pointers
-        std::string paramsLanguage = options.language.toStdString();
-        std::string paramsVadModelPath;
-
-        params.language = paramsLanguage.c_str();
-        params.translate = options.translate;
-
-        // VAD configuration
-        if (options.vad)
-        {
-            paramsVadModelPath = getVadModelPath();
-            if (juce::File (paramsVadModelPath).exists())
-            {
-                params.vad = true;
-                params.vad_model_path = paramsVadModelPath.c_str();
-                params.vad_params = whisper_vad_default_params();
-                DBG ("VAD enabled with model: " + paramsVadModelPath);
-            }
-            else
-            {
-                DBG ("VAD model not found, disabling VAD");
-                params.vad = false;
-            }
-        }
-        else
-        {
-            params.vad = false;
-        }
-
-        params.encoder_begin_callback = [] (whisper_context*, whisper_state*, void* user_data)
-        {
-            auto* data = static_cast<TranscribeCallbackData*> (user_data);
-            return ! data->isAborted();
-        };
-        params.encoder_begin_callback_user_data = &callbackData;
-
-        params.progress_callback = [] (whisper_context*, whisper_state*, int progressIn, void* user_data)
-        {
-            auto* data = static_cast<TranscribeCallbackData*> (user_data);
-            data->engine->progress.store (progressIn);
-        };
-        params.progress_callback_user_data = &callbackData;
+        errorMessage.clear();
         progress.store (0);
 
-        if (whisper_full (ctx, params, audioData.data(), static_cast<int> (audioData.size())) != 0)
+        if (isAborted()) return false;
+
+        auto* properties = new juce::DynamicObject();
+        juce::var jobOptions (properties);
+
+        properties->setProperty ("model", options.modelName);
+        if (options.language.isNotEmpty() && options.language != "auto")
+            properties->setProperty ("language", options.language);
+        properties->setProperty ("translate", options.translate);
+        properties->setProperty ("vad", options.vad);
+        properties->setProperty ("words", true);
+
+        const auto optionsJson = juce::JSON::toString (jobOptions).toStdString();
+
+        char jobId[256] {};
+
+        // The C API copies the mono 16 kHz PCM before returning.
+        if (! reaspeech_start_from_memory (audioData.data(), audioData.size(), 16000, 1,
+                                           optionsJson.c_str(), jobId, sizeof (jobId)))
+            return fail (juce::String::fromUTF8 (jobId));
+
+        bool cancelling = false;
+        std::vector<ASRSegment> result;
+
+        for (;;)
         {
-            DBG ("Transcription failed");
-            return false;
-        }
-
-        int nSegments = whisper_full_n_segments (ctx);
-        DBG ("Number of segments: " + juce::String (nSegments));
-
-        for (int i = 0; i < nSegments; ++i)
-        {
-            ASRSegment segment;
-
-            segment.text = SafeUTF8::encode (whisper_full_get_segment_text (ctx, i)).trim();
-            segment.start = ((float) whisper_full_get_segment_t0 (ctx, i)) / 100.0f;
-            segment.end = ((float) whisper_full_get_segment_t1 (ctx, i)) / 100.0f;
-
-            int nTokens = whisper_full_n_tokens (ctx, i);
-            for (int j = 0; j < nTokens; ++j)
+            if (! cancelling && isAborted())
             {
-                if (whisper_full_get_token_id (ctx, i, j) >= whisper_token_eot (ctx))
-                    continue;
-
-                ASRWord word;
-
-                word.text = SafeUTF8::encode (whisper_full_get_token_text (ctx, i, j));
-                // Map VAD token times back to the original audio timeline.
-                word.start = ((float) whisper_full_get_token_t0 (ctx, i, j)) / 100.0f;
-                word.end = ((float) whisper_full_get_token_t1 (ctx, i, j)) / 100.0f;
-                word.probability = whisper_full_get_token_p (ctx, i, j);
-
-                if (! segment.words.isEmpty() && ! word.text.isEmpty() && word.text[0] != ' ')
-                {
-                    auto& lastWord = segment.words.getReference (segment.words.size() - 1);
-                    lastWord.end = word.end;
-                    lastWord.text += word.text.trim();
-                }
-                else
-                {
-                    word.text = word.text.trim();
-                    segment.words.add (word);
-                }
+                reaspeech_cancel (jobId);
+                cancelling = true;
             }
 
-            segments.push_back (segment);
+            juce::String json;
+            {
+                // The C API return buffer is shared. Copy it while locked.
+                std::lock_guard<std::mutex> lock (pollMutex);
+                json = juce::String::fromUTF8 (reaspeech_poll (jobId));
+            }
+
+            if (json.isEmpty())
+            {
+                juce::Thread::sleep (50);
+                continue;
+            }
+
+            const auto event = juce::JSON::parse (json);
+            const auto type = event["type"].toString();
+
+            if (type == "progress")
+            {
+                if (onProgress) onProgress (event["message"].toString());
+                const auto total = static_cast<double> (event["total"]);
+                if (total > 0)
+                    progress.store (juce::jlimit (0, 100, static_cast<int> (100.0 * static_cast<double> (event["completed"]) / total)));
+            }
+            else if (type == "segment" && ! cancelling)
+            {
+                const auto data = event["segment"];
+                ASRSegment segment;
+                segment.text = data["text"].toString().trim();
+                segment.start = static_cast<float> (static_cast<double> (data["startMs"]) / 1000.0);
+                segment.end = static_cast<float> (static_cast<double> (data["endMs"]) / 1000.0);
+                const auto wordsValue = data["words"];
+                if (const auto* words = wordsValue.getArray())
+                    for (const auto& word : *words)
+                        segment.words.add ({ word["word"].toString().trim(), static_cast<float> (word["start"]),
+                                             static_cast<float> (word["end"]), static_cast<float> (word["probability"]) });
+                result.push_back (std::move (segment));
+                if (onSegment) onSegment (result.back());
+            }
+            else if (type == "completed")
+            {
+                if (cancelling || isAborted()) return false;
+                segments.insert (segments.end(), result.begin(), result.end());
+                progress.store (100);
+                return true;
+            }
+            else if (type == "cancelled") return false;
+            else if (type == "error") return fail (event["error"].toString());
         }
-
-        progress.store (100);
-        return true;
     }
 
-    // Get the full path to a model file based on its name
-    std::string getModelPath (const std::string& modelName) const
-    {
-        return modelsDir + "ggml-" + modelName + ".bin";
-    }
-
-    // Get the full path to the VAD model file
-    std::string getVadModelPath() const
-    {
-        return modelsDir + "ggml-" + Config::vadModelName + ".bin";
-    }
-
-    // Get current progress (0-100) of download or transcription
-    int getProgress() const
-    {
-        return progress.load();
-    }
+    int getProgress() const { return progress.load(); }
+    juce::String getError() const { return errorMessage; }
 
 private:
-    struct TranscribeCallbackData
+    bool fail (const juce::String& message)
     {
-        ASREngine* engine;
-        std::function<bool()> isAborted;
-    };
-
-    // Helper to download a file with progress tracking and abort support
-    bool downloadFile (const std::string& filePath, juce::URL url, const std::string& description, std::function<bool ()> isAborted)
-    {
-        if (juce::File (filePath).exists())
-        {
-            DBG (description + " already downloaded: " + filePath);
-            progress.store (100);
-            return true;
-        }
-
-        progress.store (0);
-
-        DBG ("Downloading " + description);
-        auto file = juce::File (filePath);
-
-        downloadTask = url.downloadToFile (file, juce::URL::DownloadTaskOptions());
-
-        while (downloadTask != nullptr && !downloadTask->isFinished())
-        {
-            if (isAborted())
-            {
-                DBG (description + " download aborted");
-                downloadTask.reset();
-                progress.store (0);
-
-                if (juce::File (filePath).deleteFile())
-                {
-                    DBG ("Deleted " + description + " file");
-                }
-
-                return false;
-            }
-
-            auto totalLength = downloadTask->getTotalLength();
-            if (totalLength > 0)
-            {
-                auto downloadedLength = downloadTask->getLengthDownloaded();
-                progress.store (static_cast<int> ((downloadedLength * 100) / totalLength));
-            }
-
-            juce::Thread::sleep (100);
-        }
-
-        if (downloadTask == nullptr || downloadTask->hadError())
-        {
-            DBG ("Failed to download " + description);
-            downloadTask.reset();
-            progress.store (0);
-
-            if (juce::File (filePath).deleteFile())
-            {
-                DBG ("Deleted " + description + " file");
-            }
-
-            return false;
-        }
-
-        downloadTask.reset();
-        progress.store (100);
-        return true;
+        errorMessage = message;
+        return false;
     }
 
-    std::string modelsDir;
-    std::string lastModelName;
-    whisper_context* ctx = nullptr;
-    std::unique_ptr<juce::URL::DownloadTask> downloadTask;
-    std::atomic<int> progress;
+    inline static std::mutex pollMutex;
+    inline static std::once_flag cacheInitialized;
+
+    std::atomic<int> progress { 0 };
+    juce::String errorMessage;
 };

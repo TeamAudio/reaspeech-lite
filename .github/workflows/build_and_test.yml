@@ -38,35 +38,48 @@ jobs:
       matrix:
         include:
           - name: Linux
-            os: ubuntu-22.04
+            # The prebuilt ONNX Runtime requires glibc's C23 conversion symbols.
+            os: ubuntu-24.04
             pluginval-binary: ./pluginval
             extra-flags: -G Ninja
+          - name: LinuxCUDA12
+            os: ubuntu-24.04
+            cuda: true
+            cuda-version: '12.9.1'
+            release-only: true
+            extra-flags: -G Ninja -DREASPEECH_FEATURES=cuda
+          - name: LinuxCUDA13
+            os: ubuntu-24.04
+            cuda: true
+            cuda-version: '13.1.0'
+            release-only: true
+            extra-flags: -G Ninja -DREASPEECH_FEATURES=cuda
           - name: macOS
             os: macos-15
             pluginval-binary: pluginval.app/Contents/MacOS/pluginval
-            extra-flags: -G Ninja -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+            extra-flags: -G Ninja -DCMAKE_OSX_ARCHITECTURES=arm64 -DREASPEECH_LIBRARY=Builds/reaspeech-rust/aarch64-apple-darwin/release/libreaspeech.a
           - name: Windows
             os: windows-latest
             pluginval-binary: ./pluginval.exe
-          - name: WindowsCUDA
+          - name: WindowsCUDA12
             os: windows-2022
             cuda: true
-            cuda-version: '12.5.0'
+            cuda-version: '12.9.1'
             release-only: true
-            extra-flags: -DGGML_CUDA=1 -DGGML_STATIC=1 -DCMAKE_CUDA_ARCHITECTURES=all
+            extra-flags: -DREASPEECH_FEATURES=cuda
           - name: WindowsCUDA13
             os: windows-2022
             cuda: true
             cuda-version: '13.1.0'
             release-only: true
-            extra-flags: -DGGML_CUDA=1 -DGGML_STATIC=1 -DCMAKE_CUDA_ARCHITECTURES="75-real;80-real;86-real;89-real;90-real;100-real;100-virtual"
+            extra-flags: -DREASPEECH_FEATURES=cuda
 
     steps:
       - name: Check if build should be skipped
         run: |
-          if [[ "${{ matrix.release-only }}" == "true" && "${{ github.ref }}" != *"tags/v"* ]]; then
+          if [[ "${{ matrix.release-only }}" == "true" && "${{ github.event_name }}" != "workflow_dispatch" && "${{ github.ref }}" != refs/tags/v* ]]; then
             echo "SHOULD_SKIP=true" >> $GITHUB_ENV
-            echo "::notice::Build '${{ matrix.name }}' will be skipped - only runs on releases (tags starting with 'v')"
+            echo "::notice::Build '${{ matrix.name }}' will be skipped - only runs on version tags or manual workflow runs"
           fi
 
       # Set up MSVC toolchain and developer command prompt (Windows)
@@ -85,13 +98,29 @@ jobs:
         uses: Jimver/cuda-toolkit@v0.2.30
         with:
           cuda: ${{ matrix.cuda-version }}
+          linux-local-args: '["--toolkit"]'
+
+      - name: Configure CUDA compilation
+        if: env.SHOULD_SKIP != 'true' && matrix.cuda
+        run: |
+          # Compile without probing a GPU. Both toolkits support compute 7.5.
+          echo "CUDA_COMPUTE_CAP=75" >> "$GITHUB_ENV"
+          # Preserve PTX in the native kernel archive for newer GPU generations.
+          echo "NVCC_APPEND_FLAGS=-gencode=arch=compute_75,code=compute_75" >> "$GITHUB_ENV"
+
+      - name: Configure Linux CUDA host compiler
+        if: env.SHOULD_SKIP != 'true' && runner.os == 'Linux' && matrix.cuda
+        run: |
+          # Pin nvcc's host compiler independently of the plugin's Clang version.
+          sudo apt-get update && sudo apt-get install -y g++-13
+          echo "NVCC_CCBIN=/usr/bin/g++-13" >> "$GITHUB_ENV"
 
       # This also starts up our "fake" display (Xvfb), needed for pluginval
       - name: Install JUCE Linux Deps
         if: env.SHOULD_SKIP != 'true' && runner.os == 'Linux'
         # Thanks to McMartin & co https://forum.juce.com/t/list-of-juce-dependencies-under-linux/15121/44
         run: |
-          sudo apt-get update && sudo apt install libasound2-dev libx11-dev libxinerama-dev libxext-dev libfreetype6-dev libwebkit2gtk-4.0-dev libglu1-mesa-dev xvfb ninja-build libcurl4-openssl-dev
+          sudo apt-get update && sudo apt install libasound2-dev libx11-dev libxinerama-dev libxext-dev libfreetype6-dev libwebkit2gtk-4.1-dev libglu1-mesa-dev xvfb ninja-build libcurl4-openssl-dev
           sudo /usr/bin/Xvfb $DISPLAY &
 
       - name: Cache IPP (Windows)
@@ -124,7 +153,7 @@ jobs:
         if: env.SHOULD_SKIP != 'true' && runner.os == 'macOS'
         run: brew install ninja osxutils
 
-      # Pinned because Xcode 26's supported deployment range starts at macOS 11, and we target 10.15
+      # Keep the CI toolchain pinned for reproducible macOS builds.
       - name: Use Xcode 16.2 (macOS)
         if: env.SHOULD_SKIP != 'true' && runner.os == 'macOS'
         uses: maxim-lobanov/setup-xcode@v1
@@ -136,6 +165,10 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
+
+      - name: Setup Rust
+        if: env.SHOULD_SKIP != 'true'
+        uses: dtolnay/rust-toolchain@stable
 
       - name: Setup Node.js
         if: env.SHOULD_SKIP != 'true'
@@ -174,9 +207,18 @@ jobs:
       #     dev-id-installer-cert: ${{ secrets.DEV_ID_INSTALLER_CERT }}
       #     dev-id-installer-password: ${{ secrets.DEV_ID_INSTALLER_PASSWORD }}
 
+      - name: Build Apple Silicon ReaSpeech C API (macOS)
+        if: env.SHOULD_SKIP != 'true' && runner.os == 'macOS'
+        env:
+          MACOSX_DEPLOYMENT_TARGET: "13.4"
+        run: |
+          rustup target add aarch64-apple-darwin
+          cargo build --manifest-path reaspeech-lib/Cargo.toml --target-dir Builds/reaspeech-rust --release --locked --no-default-features --target aarch64-apple-darwin --features metal
+          lipo Builds/reaspeech-rust/aarch64-apple-darwin/release/libreaspeech.a -verify_arch arm64
+
       - name: Configure
         if: env.SHOULD_SKIP != 'true'
-        run: cmake -B ${{ env.BUILD_DIR }} -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE}} -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache ${{ matrix.extra-flags }} .
+        run: cmake -B ${{ env.BUILD_DIR }} -DBUILD_ASR_TESTS=ON -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE}} -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache ${{ matrix.extra-flags }} .
 
       - name: Build
         if: env.SHOULD_SKIP != 'true'
@@ -185,7 +227,14 @@ jobs:
       - name: Test & Benchmarks
         if: env.SHOULD_SKIP != 'true'
         working-directory: ${{ env.BUILD_DIR }}
-        run: ctest --verbose --output-on-failure
+        run: |
+          if [[ "${{ matrix.cuda }}" == "true" ]]; then
+            # Hosted CUDA runners have a toolkit but no NVIDIA driver/GPU, so
+            # only run the adapter tests that do not load the CUDA backend.
+            ctest --build-config ${{ env.BUILD_TYPE }} --verbose --output-on-failure --exclude-regex '^ReaSpeechRuntimeTests$'
+          else
+            ctest --build-config ${{ env.BUILD_TYPE }} --verbose --output-on-failure
+          fi
 
       - name: Read in .env from CMake # see GitHubENV.cmake
         if: env.SHOULD_SKIP != 'true'
@@ -309,7 +358,7 @@ jobs:
           path: packaging/${{ env.ARTIFACT_NAME }}.pkg
 
   release:
-    if: contains(github.ref, 'tags/v')
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     needs: build_and_test
 
